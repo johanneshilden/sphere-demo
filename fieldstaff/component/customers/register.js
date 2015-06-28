@@ -222,6 +222,7 @@ var AreaSelect = React.createClass({
             }];
         }
         return {
+            value: 'Global',
             areas: areas
         };
     },
@@ -230,6 +231,7 @@ var AreaSelect = React.createClass({
         this.isValid(value);
     },
     handleChange: function() {
+        this.setValue(this.refs.input.getValue());
     },
     isValid: function() {
         return true;
@@ -243,6 +245,8 @@ var AreaSelect = React.createClass({
             <Input 
                 type="select"
                 label="Area"
+                value={this.state.value}
+                onChange={this.handleChange}
                 ref="input">
                 {areas.map(function(area) {
                     return (

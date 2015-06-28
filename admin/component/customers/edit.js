@@ -216,10 +216,13 @@ var AreaSelect = React.createClass({
     getInitialState: function() {
         var areas = DataStore.fetchCollection('areas');
         if (!areas || !areas.length) {
-            areas = [{id: 1, name: 'global'}];
+            areas = [{
+                "name": "Global", 
+                "_links": { "self": {"href": "global"} }
+            }];
         }
         return {
-            value: 'global',
+            value: 'Global',
             areas: areas
         };
     },
@@ -228,6 +231,7 @@ var AreaSelect = React.createClass({
         this.isValid(value);
     },
     handleChange: function() {
+        this.setValue(this.refs.input.getValue());
     },
     isValid: function() {
         return true;
@@ -241,10 +245,16 @@ var AreaSelect = React.createClass({
             <Input 
                 type="select"
                 label="Area"
+                value={this.state.value}
+                onChange={this.handleChange}
                 ref="input">
                 {areas.map(function(area) {
                     return (
-                        <option key={area.id} value={area.id}>{area.name}</option>
+                        <option 
+                            key={area['_links']['self'].href} 
+                            value={area.name}>
+                            {area.name}
+                        </option>
                     );
                 })}
             </Input>
