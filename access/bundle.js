@@ -191,7 +191,7 @@ var CreateDeviceNodeModal = React.createClass({displayName: "CreateDeviceNodeMod
         if (!Object.keys(errors).length) {
             var data = {
                 name: this.state.nodeName,
-                device: this.state.nodeName + ':' + this.state.nodePass,
+                password: this.state.nodePass,
                 type: "device"
             };
             this.props.saveHandler(data);
