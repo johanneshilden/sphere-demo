@@ -258,8 +258,8 @@ var AreaSelect = React.createClass({
                 type="select"
                 label="Area"
                 value={this.state.value}
-                ref="input">
-                onChange={this.handleChange}
+                ref="input"
+                onChange={this.handleChange}>
                 {areas.map(function(area) {
                     return (
                         <option 
