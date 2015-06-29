@@ -319,7 +319,7 @@ var PhoneInput = React.createClass({displayName: "PhoneInput",
 });
 
 var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
-    getInitialState: function() {
+    fetchCategories: function() {
         var categories = DataStore.fetchCollection('price-categories');
         if (!categories || !categories.length) {
             categories = [{
@@ -327,9 +327,13 @@ var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
                 "_links": { "self": {"href": "default"} }
             }];
         }
-        return {
-            value: 'Default',
+        this.setState({
             categories: categories
+        });
+    },
+    getInitialState: function() {
+        return {
+            categories: []
         };
     },
     setValue: function(value) {
@@ -344,6 +348,14 @@ var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
     },
     reset: function() {
         this.setState(this.getInitialState());
+        this.fetchCategories();
+    },
+    componentDidMount: function() {
+        this.fetchCategories();
+        DataStore.on('change', this.fetchCategories);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchCategories);
     },
     render: function() {
         var categories = this.state.categories;
@@ -417,7 +429,7 @@ var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistra
                     onClick: this.resetForm}, 
                     "Reset"
                 )
-             )
+            )
         );
     }
 });

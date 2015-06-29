@@ -213,7 +213,7 @@ var PhoneInput = React.createClass({
 });
 
 var AreaSelect = React.createClass({
-    getInitialState: function() {
+    fetchAreas: function() {
         var areas = DataStore.fetchCollection('areas');
         if (!areas || !areas.length) {
             areas = [{
@@ -221,9 +221,13 @@ var AreaSelect = React.createClass({
                 "_links": { "self": {"href": "global"} }
             }];
         }
-        return {
-            value: 'Global',
+        this.setState({
             areas: areas
+        });
+    },
+    getInitialState: function() {
+        return {
+            areas: []
         };
     },
     setValue: function(value) {
@@ -238,6 +242,14 @@ var AreaSelect = React.createClass({
     },
     reset: function() {
         this.setState(this.getInitialState());
+        this.fetchAreas();
+    },
+    componentDidMount: function() {
+        this.fetchAreas();
+        DataStore.on('change', this.fetchAreas);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchAreas);
     },
     render: function() {
         var areas = this.state.areas;
@@ -246,8 +258,8 @@ var AreaSelect = React.createClass({
                 type="select"
                 label="Area"
                 value={this.state.value}
-                onChange={this.handleChange}
                 ref="input">
+                onChange={this.handleChange}
                 {areas.map(function(area) {
                     return (
                         <option 
@@ -263,7 +275,7 @@ var AreaSelect = React.createClass({
 });
 
 var PriceCategorySelect = React.createClass({
-    getInitialState: function() {
+    fetchCategories: function() {
         var categories = DataStore.fetchCollection('price-categories');
         if (!categories || !categories.length) {
             categories = [{
@@ -271,9 +283,13 @@ var PriceCategorySelect = React.createClass({
                 "_links": { "self": {"href": "default"} }
             }];
         }
-        return {
-            value: 'Default',
+        this.setState({
             categories: categories
+        });
+    },
+    getInitialState: function() {
+        return {
+            categories: []
         };
     },
     setValue: function(value) {
@@ -288,6 +304,13 @@ var PriceCategorySelect = React.createClass({
     },
     reset: function() {
         this.setState(this.getInitialState());
+    },
+    componentDidMount: function() {
+        this.fetchCategories();
+        DataStore.on('change', this.fetchCategories);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchCategories);
     },
     render: function() {
         var categories = this.state.categories;

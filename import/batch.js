@@ -37,6 +37,7 @@ fs.readFile('install.json', 'utf8', function (err, data) {
         for (var i = 0; i < batch.length; i++) {
             var payload = batch[i],
                 url = key + '/' + (i + 1);
+            console.log(url);
             setSelfHref(payload, url);
             commit.push({
                 index: i + 1,
