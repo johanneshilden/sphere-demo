@@ -26,6 +26,7 @@ var ProgressBar             = Bootstrap.ProgressBar;
 
 var device = null;
 var _url   = 'http://agile-oasis-7393.herokuapp.com';
+//var _url   = 'http://localhost:3333';
 
 var NotificationList = React.createClass({displayName: "NotificationList",
     handleDismiss: function(item) {

@@ -500,6 +500,23 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
             {"columnName": "area", "displayName": "Area"}, 
             {"columnName": "priceCategory", "displayName": "Price category"},
             {
+                "columnName": "position", 
+                "displayName": "Location",
+                "customComponent": React.createClass({
+                    render: function() {
+                        var position = this.props.rowData.position;
+                        if (!position || !position.latitude || !position.longitude) {
+                            return (
+                                React.createElement("span", null, "Unknown")
+                            );
+                        }
+                        return (
+                            React.createElement("span", null, React.createElement("a", {href: 'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'}, "Show"))
+                        );
+                    }
+                })
+            },
+            {
                 "columnName": "active", 
                 "displayName": "Status",
                 "customComponent": React.createClass({
@@ -531,7 +548,7 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
                     resultsPerPage: "20", 
                     useGriddleStyles: false, 
                     columnMetadata: metadata, 
-                    columns: ["name", "address", "tin", "phone", "area", "priceCategory", "active", "edit"]})
+                    columns: ["name", "address", "tin", "phone", "area", "priceCategory", "position", "active", "edit"]})
             )
         );
     }
@@ -1268,6 +1285,7 @@ var api = new GroundFork.Api({
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
     url: "http://agile-oasis-7393.herokuapp.com/",
+    //url: "http://localhost:3333/",
     clientKey: "admin-user1",
     clientSecret: "administrator",
     onRequestStart: function() {},

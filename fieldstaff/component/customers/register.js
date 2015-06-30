@@ -221,9 +221,10 @@ var AreaSelect = React.createClass({
                 "_links": { "self": {"href": "global"} }
             }];
         }
-        this.setState({
-            areas: areas
-        });
+        this.setState({areas: areas});
+        if (!this.state.value) {
+            this.setState({value: areas[0].name});
+        }
     },
     getInitialState: function() {
         return {
@@ -283,9 +284,10 @@ var PriceCategorySelect = React.createClass({
                 "_links": { "self": {"href": "default"} }
             }];
         }
-        this.setState({
-            categories: categories
-        });
+        this.setState({categories: categories});
+        if (!this.state.value) {
+            this.setState({value: categories[0].name});
+        }
     },
     getInitialState: function() {
         return {
@@ -338,7 +340,8 @@ var PriceCategorySelect = React.createClass({
 var CustomerRegistrationForm = React.createClass({
     getInitialState: function() {
         return {
-            template: ''
+            template: '',
+            geoLocation: null
         };
     },
     handleSubmit: function() {
@@ -352,7 +355,8 @@ var CustomerRegistrationForm = React.createClass({
                     phone         : this.refs.customerPhone.state.value,
                     area          : this.refs.customerArea.state.value,
                     priceCategory : this.refs.customerPriceCategory.state.value,
-                    template      : this.state.template
+                    template      : this.state.template,
+                    position      : this.state.geoLocation
                 }
             });
             this.resetForm();
@@ -386,6 +390,14 @@ var CustomerRegistrationForm = React.createClass({
     },
     componentDidMount: function() {
         DataStore.on('register-partial', this.fillOutPartial);
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                this.setState({geoLocation: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                }});
+            }.bind(this));
+        }
     },
     componentWillUnmount: function() {
         DataStore.removeListener('register-partial', this.fillOutPartial);

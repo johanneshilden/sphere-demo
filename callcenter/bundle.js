@@ -134,6 +134,7 @@ var PendingRegistrationsView = React.createClass({displayName: "PendingRegistrat
             {"columnName": "name", "displayName": "Name"}, 
             {"columnName": "address", "displayName": "Address"}, 
             {"columnName": "phone", "displayName": "Phone number"}, 
+            {"columnName": "area", "displayName": "Area"},
             {"columnName": "priceCategory", "displayName": "Price category"}
         ];
         return (
@@ -145,7 +146,7 @@ var PendingRegistrationsView = React.createClass({displayName: "PendingRegistrat
                     resultsPerPage: "20", 
                     useGriddleStyles: false, 
                     columnMetadata: metadata, 
-                    columns: ["_local", "name", "address", "phone", "priceCategory"]})
+                    columns: ["_local", "name", "address", "phone", "area", "priceCategory"]})
             )
         );
     }
@@ -318,6 +319,69 @@ var PhoneInput = React.createClass({displayName: "PhoneInput",
     }
 });
 
+var AreaSelect = React.createClass({displayName: "AreaSelect",
+    fetchAreas: function() {
+        var areas = DataStore.fetchCollection('areas');
+        if (!areas || !areas.length) {
+            areas = [{
+                "name": "Global", 
+                "_links": { "self": {"href": "global"} }
+            }];
+        }
+        this.setState({areas: areas});
+        if (!this.state.value) {
+            this.setState({value: areas[0].name});
+        }
+    },
+    getInitialState: function() {
+        return {
+            areas: []
+        };
+    },
+    setValue: function(value) {
+        this.setState({value: value});
+        this.isValid(value);
+    },
+    handleChange: function() {
+        this.setValue(this.refs.input.getValue());
+    },
+    isValid: function() {
+        return true;
+    },
+    reset: function() {
+        this.setState(this.getInitialState());
+        this.fetchAreas();
+    },
+    componentDidMount: function() {
+        this.fetchAreas();
+        DataStore.on('change', this.fetchAreas);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchAreas);
+    },
+    render: function() {
+        var areas = this.state.areas;
+        return (
+            React.createElement(Input, {
+                type: "select", 
+                label: "Area", 
+                value: this.state.value, 
+                ref: "input", 
+                onChange: this.handleChange}, 
+                areas.map(function(area) {
+                    return (
+                        React.createElement("option", {
+                            key: area['_links']['self'].href, 
+                            value: area.name}, 
+                            area.name
+                        )
+                    );
+                })
+            )
+        );
+    }
+});
+
 var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
     fetchCategories: function() {
         var categories = DataStore.fetchCollection('price-categories');
@@ -327,9 +391,10 @@ var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
                 "_links": { "self": {"href": "default"} }
             }];
         }
-        this.setState({
-            categories: categories
-        });
+        this.setState({categories: categories});
+        if (!this.state.value) {
+            this.setState({value: categories[0].name});
+        }
     },
     getInitialState: function() {
         return {
@@ -348,7 +413,6 @@ var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
     },
     reset: function() {
         this.setState(this.getInitialState());
-        this.fetchCategories();
     },
     componentDidMount: function() {
         this.fetchCategories();
@@ -389,6 +453,7 @@ var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistra
                     name          : this.refs.customerName.state.value,
                     address       : this.refs.customerAddress.state.value,
                     phone         : this.refs.customerPhone.state.value,
+                    area          : this.refs.customerArea.state.value,
                     priceCategory : this.refs.customerPriceCategory.state.value
                 }
             });
@@ -399,12 +464,14 @@ var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistra
         return (this.refs.customerName.isValid()
               & this.refs.customerAddress.isValid()
               & this.refs.customerPhone.isValid()
+              & this.refs.customerArea.isValid()
               & this.refs.customerPriceCategory.isValid());
     },
     resetForm: function() {
         this.refs.customerName.reset();
         this.refs.customerAddress.reset();
         this.refs.customerPhone.reset();
+        this.refs.customerArea.reset();
         this.refs.customerPriceCategory.reset();
     },
     render: function() {
@@ -416,6 +483,8 @@ var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistra
                     ref: "customerAddress"}), 
                 React.createElement(PhoneInput, {
                     ref: "customerPhone"}), 
+                React.createElement(AreaSelect, {
+                    ref: "customerArea"}), 
                 React.createElement(PriceCategorySelect, {
                     ref: "customerPriceCategory"}), 
                 React.createElement("hr", null), 
@@ -1161,6 +1230,7 @@ var api = new GroundFork.Api({
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
     url: "http://agile-oasis-7393.herokuapp.com/",
+    //url: "http://localhost:3333/",
     clientKey: "callcenter-user1",
     clientSecret: "callcenter",
     onRequestStart: function() {},

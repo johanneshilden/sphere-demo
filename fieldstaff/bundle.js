@@ -90,7 +90,25 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
             {"columnName": "tin", "displayName": "TIN number"}, 
             {"columnName": "phone", "displayName": "Phone number"}, 
             {"columnName": "area", "displayName": "Area"}, 
-            {"columnName": "priceCategory", "displayName": "Price category"}
+            {"columnName": "priceCategory", "displayName": "Price category"},
+            {
+                "columnName": "position", 
+                "displayName": "Location",
+                "customComponent": React.createClass({
+                    render: function() {
+                        var position = this.props.rowData.position;
+                        if (!position || !position.latitude || !position.longitude) {
+                            return (
+                                React.createElement("span", null, "Unknown")
+                            );
+                        }
+                        return (
+                            React.createElement("span", null, React.createElement("a", {href: 'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'}, "Show"))
+                        );
+                    }
+                })
+            },
+
         ];
         return (
             React.createElement(Panel, null, 
@@ -101,7 +119,7 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
                     resultsPerPage: "20", 
                     useGriddleStyles: false, 
                     columnMetadata: metadata, 
-                    columns: ["name", "address", "tin", "phone", "area", "priceCategory"]})
+                    columns: ["name", "address", "tin", "phone", "area", "priceCategory", "position"]})
             )
         );
     }
@@ -172,6 +190,7 @@ var PendingRegistrationsView = React.createClass({displayName: "PendingRegistrat
             }, 
             {"columnName": "address", "displayName": "Address"}, 
             {"columnName": "phone", "displayName": "Phone number"}, 
+            {"columnName": "area", "displayName": "Area"},
             {"columnName": "priceCategory", "displayName": "Price category"},
             {
                 "columnName": "actions", 
@@ -202,7 +221,7 @@ var PendingRegistrationsView = React.createClass({displayName: "PendingRegistrat
                     resultsPerPage: "20", 
                     useGriddleStyles: false, 
                     columnMetadata: metadata, 
-                    columns: ["name", "address", "phone", "priceCategory", "actions"]})
+                    columns: ["name", "address", "phone", "priceCategory", "area", "actions"]})
             )
         );
     }
@@ -454,9 +473,10 @@ var AreaSelect = React.createClass({displayName: "AreaSelect",
                 "_links": { "self": {"href": "global"} }
             }];
         }
-        this.setState({
-            areas: areas
-        });
+        this.setState({areas: areas});
+        if (!this.state.value) {
+            this.setState({value: areas[0].name});
+        }
     },
     getInitialState: function() {
         return {
@@ -516,9 +536,10 @@ var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
                 "_links": { "self": {"href": "default"} }
             }];
         }
-        this.setState({
-            categories: categories
-        });
+        this.setState({categories: categories});
+        if (!this.state.value) {
+            this.setState({value: categories[0].name});
+        }
     },
     getInitialState: function() {
         return {
@@ -571,7 +592,8 @@ var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
 var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistrationForm",
     getInitialState: function() {
         return {
-            template: ''
+            template: '',
+            geoLocation: null
         };
     },
     handleSubmit: function() {
@@ -585,7 +607,8 @@ var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistra
                     phone         : this.refs.customerPhone.state.value,
                     area          : this.refs.customerArea.state.value,
                     priceCategory : this.refs.customerPriceCategory.state.value,
-                    template      : this.state.template
+                    template      : this.state.template,
+                    position      : this.state.geoLocation
                 }
             });
             this.resetForm();
@@ -619,6 +642,14 @@ var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistra
     },
     componentDidMount: function() {
         DataStore.on('register-partial', this.fillOutPartial);
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                this.setState({geoLocation: {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude
+                }});
+            }.bind(this));
+        }
     },
     componentWillUnmount: function() {
         DataStore.removeListener('register-partial', this.fillOutPartial);
@@ -1595,6 +1626,7 @@ var api = new GroundFork.Api({
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
     url: "http://agile-oasis-7393.herokuapp.com/",
+    //url: "http://localhost:3333/",
     clientKey: "fieldstaff-user1",
     clientSecret: "fieldstaff",
     onRequestStart: function() {},

@@ -31,6 +31,23 @@ var CustomersListView = React.createClass({
             {"columnName": "area", "displayName": "Area"}, 
             {"columnName": "priceCategory", "displayName": "Price category"},
             {
+                "columnName": "position", 
+                "displayName": "Location",
+                "customComponent": React.createClass({
+                    render: function() {
+                        var position = this.props.rowData.position;
+                        if (!position || !position.latitude || !position.longitude) {
+                            return (
+                                <span>Unknown</span>
+                            );
+                        }
+                        return (
+                            <span><a href={'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'}>Show</a></span>
+                        );
+                    }
+                })
+            },
+            {
                 "columnName": "active", 
                 "displayName": "Status",
                 "customComponent": React.createClass({
@@ -62,7 +79,7 @@ var CustomersListView = React.createClass({
                     resultsPerPage="20"
                     useGriddleStyles={false}
                     columnMetadata={metadata}
-                    columns={["name", "address", "tin", "phone", "area", "priceCategory", "active", "edit"]} />
+                    columns={["name", "address", "tin", "phone", "area", "priceCategory", "position", "active", "edit"]} />
             </Panel>
         );
     }

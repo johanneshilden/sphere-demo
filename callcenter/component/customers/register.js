@@ -162,6 +162,69 @@ var PhoneInput = React.createClass({
     }
 });
 
+var AreaSelect = React.createClass({
+    fetchAreas: function() {
+        var areas = DataStore.fetchCollection('areas');
+        if (!areas || !areas.length) {
+            areas = [{
+                "name": "Global", 
+                "_links": { "self": {"href": "global"} }
+            }];
+        }
+        this.setState({areas: areas});
+        if (!this.state.value) {
+            this.setState({value: areas[0].name});
+        }
+    },
+    getInitialState: function() {
+        return {
+            areas: []
+        };
+    },
+    setValue: function(value) {
+        this.setState({value: value});
+        this.isValid(value);
+    },
+    handleChange: function() {
+        this.setValue(this.refs.input.getValue());
+    },
+    isValid: function() {
+        return true;
+    },
+    reset: function() {
+        this.setState(this.getInitialState());
+        this.fetchAreas();
+    },
+    componentDidMount: function() {
+        this.fetchAreas();
+        DataStore.on('change', this.fetchAreas);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchAreas);
+    },
+    render: function() {
+        var areas = this.state.areas;
+        return (
+            <Input 
+                type="select"
+                label="Area"
+                value={this.state.value}
+                ref="input"
+                onChange={this.handleChange}>
+                {areas.map(function(area) {
+                    return (
+                        <option 
+                            key={area['_links']['self'].href} 
+                            value={area.name}>
+                            {area.name}
+                        </option>
+                    );
+                })}
+            </Input>
+        );
+    }
+});
+
 var PriceCategorySelect = React.createClass({
     fetchCategories: function() {
         var categories = DataStore.fetchCollection('price-categories');
@@ -171,9 +234,10 @@ var PriceCategorySelect = React.createClass({
                 "_links": { "self": {"href": "default"} }
             }];
         }
-        this.setState({
-            categories: categories
-        });
+        this.setState({categories: categories});
+        if (!this.state.value) {
+            this.setState({value: categories[0].name});
+        }
     },
     getInitialState: function() {
         return {
@@ -192,7 +256,6 @@ var PriceCategorySelect = React.createClass({
     },
     reset: function() {
         this.setState(this.getInitialState());
-        this.fetchCategories();
     },
     componentDidMount: function() {
         this.fetchCategories();
@@ -233,6 +296,7 @@ var CustomerRegistrationForm = React.createClass({
                     name          : this.refs.customerName.state.value,
                     address       : this.refs.customerAddress.state.value,
                     phone         : this.refs.customerPhone.state.value,
+                    area          : this.refs.customerArea.state.value,
                     priceCategory : this.refs.customerPriceCategory.state.value
                 }
             });
@@ -243,12 +307,14 @@ var CustomerRegistrationForm = React.createClass({
         return (this.refs.customerName.isValid()
               & this.refs.customerAddress.isValid()
               & this.refs.customerPhone.isValid()
+              & this.refs.customerArea.isValid()
               & this.refs.customerPriceCategory.isValid());
     },
     resetForm: function() {
         this.refs.customerName.reset();
         this.refs.customerAddress.reset();
         this.refs.customerPhone.reset();
+        this.refs.customerArea.reset();
         this.refs.customerPriceCategory.reset();
     },
     render: function() {
@@ -260,6 +326,8 @@ var CustomerRegistrationForm = React.createClass({
                     ref="customerAddress" />
                 <PhoneInput 
                     ref="customerPhone" />
+                <AreaSelect 
+                    ref="customerArea" />
                 <PriceCategorySelect 
                     ref="customerPriceCategory" />
                 <hr />

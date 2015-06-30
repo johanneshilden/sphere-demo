@@ -30,6 +30,7 @@ var PendingRegistrationsView = React.createClass({
             {"columnName": "name", "displayName": "Name"}, 
             {"columnName": "address", "displayName": "Address"}, 
             {"columnName": "phone", "displayName": "Phone number"}, 
+            {"columnName": "area", "displayName": "Area"},
             {"columnName": "priceCategory", "displayName": "Price category"}
         ];
         return (
@@ -41,7 +42,7 @@ var PendingRegistrationsView = React.createClass({
                     resultsPerPage="20"
                     useGriddleStyles={false}
                     columnMetadata={metadata}
-                    columns={["_local", "name", "address", "phone", "priceCategory"]} />
+                    columns={["_local", "name", "address", "phone", "area", "priceCategory"]} />
             </Panel>
         );
     }
