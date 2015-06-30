@@ -82,7 +82,24 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
             {"columnName": "tin", "displayName": "TIN number"}, 
             {"columnName": "phone", "displayName": "Phone number"}, 
             {"columnName": "area", "displayName": "Area"}, 
-            {"columnName": "priceCategory", "displayName": "Price category"}
+            {"columnName": "priceCategory", "displayName": "Price category"},
+            {
+                "columnName": "position", 
+                "displayName": "Location",
+                "customComponent": React.createClass({
+                    render: function() {
+                        var position = this.props.rowData.position;
+                        if (!position || !position.latitude || !position.longitude) {
+                            return (
+                                React.createElement("span", null, "Unknown")
+                            );
+                        }
+                        return (
+                            React.createElement("span", null, React.createElement("a", {href: 'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'}, "Show"))
+                        );
+                    }
+                })
+            }
         ];
         return (
             React.createElement(Panel, null, 
@@ -93,7 +110,7 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
                     resultsPerPage: "20", 
                     useGriddleStyles: false, 
                     columnMetadata: metadata, 
-                    columns: ["name", "address", "tin", "phone", "area", "priceCategory"]})
+                    columns: ["name", "address", "tin", "phone", "area", "priceCategory", "position"]})
             )
         );
     }
