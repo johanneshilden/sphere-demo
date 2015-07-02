@@ -32,8 +32,8 @@ var api = new GroundFork.Api({
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
-    //url: "http://agile-oasis-7393.herokuapp.com/",
-    url: "http://localhost:3333/",
+    url: "http://agile-oasis-7393.herokuapp.com/",
+    //url: "http://localhost:3333/",
     clientKey: "admin-user1",
     clientSecret: "administrator",
     onRequestStart: function() {},
