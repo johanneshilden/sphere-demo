@@ -17,6 +17,9 @@ AppDispatcher.register(function(payload) {
             DataStore.createCustomer(payload.customer);
             DataStore.deleteTemplate(payload.customer.template);
             break;
+        case 'create-complaint':
+            DataStore.createComplaint(payload.complaint);
+            break;
         case 'alert':
             DataStore.emit('alert', payload.message);
             break;

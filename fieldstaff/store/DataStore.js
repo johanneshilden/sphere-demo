@@ -43,8 +43,20 @@ var DataStore = assign({}, EventEmitter.prototype, {
             resource : template
         });
         this.emit('change');
-    }
+    },
 
+    createComplaint : function(complaint) {
+        complaint._local = 'true';
+        var response = this.api.command({
+            method   : 'POST',
+            resource : 'complaints',
+            payload  : complaint 
+        });
+        this.emit('change');
+        this.emit('new-complaint');
+        this.emit('alert', 'The complaint was registered.');
+    }
+ 
 });
 
 module.exports = DataStore;

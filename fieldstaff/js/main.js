@@ -1,25 +1,27 @@
-var $               = require('jquery');
-var Backbone        = require('backbone');
-var Bootstrap       = require('react-bootstrap');
-var Griddle         = require('griddle-react');
-var React           = require('react');
-var DataStore       = require('../store/DataStore');
-var GroundFork      = require('./groundfork-js/groundfork');
-var ProductsView    = require('../component/products');
-var OrdersView      = require('../component/orders/list');
-var StockView       = require('../component/stock/list');
-var TasksView       = require('../component/tasks');
-var CustomersView   = require('../component/customers');
-var AppDispatcher   = require('../dispatcher/AppDispatcher');
+var $                   = require('jquery');
+var Backbone            = require('backbone');
+var Bootstrap           = require('react-bootstrap');
+var Griddle             = require('griddle-react');
+var React               = require('react');
+var DataStore           = require('../store/DataStore');
+var GroundFork          = require('./groundfork-js/groundfork');
+var ProductsView        = require('../component/products');
+var OrdersView          = require('../component/orders/list');
+var StockView           = require('../component/stock/list');
+var TasksView           = require('../component/tasks');
+var CustomersView       = require('../component/customers');
+var CustomersEntityView = require('../component/customers/view');
+var ComplaintsView      = require('../component/complaints');
+var AppDispatcher       = require('../dispatcher/AppDispatcher');
 
-var Alert           = Bootstrap.Alert;
-var Button          = Bootstrap.Button;
-var ButtonToolbar   = Bootstrap.ButtonToolbar;
-var Nav             = Bootstrap.Nav;
-var NavItem         = Bootstrap.NavItem;
-var Navbar          = Bootstrap.Navbar;
-var Panel           = Bootstrap.Panel;
-var ProgressBar     = Bootstrap.ProgressBar;
+var Alert               = Bootstrap.Alert;
+var Button              = Bootstrap.Button;
+var ButtonToolbar       = Bootstrap.ButtonToolbar;
+var Nav                 = Bootstrap.Nav;
+var NavItem             = Bootstrap.NavItem;
+var Navbar              = Bootstrap.Navbar;
+var Panel               = Bootstrap.Panel;
+var ProgressBar         = Bootstrap.ProgressBar;
 
 var store = new GroundFork.BrowserStorage({
     namespace: "sphere.fieldstaff"
@@ -34,8 +36,8 @@ var api = new GroundFork.Api({
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
-    url: "http://agile-oasis-7393.herokuapp.com/",
-    //url: "http://localhost:3333/",
+    //url: "http://agile-oasis-7393.herokuapp.com/",
+    url: "http://localhost:3333/",
     clientKey: "fieldstaff-user1",
     clientSecret: "fieldstaff",
     onRequestStart: function() {},
@@ -167,8 +169,9 @@ var NavComponent = React.createClass({
                        <NavItem eventKey={1} href="#orders">Orders</NavItem> 
                        <NavItem eventKey={2} href="#stock">Stock</NavItem> 
                        <NavItem eventKey={3} href="#customers">Customers</NavItem> 
-                       <NavItem eventKey={4} href="#tasks">Tasks</NavItem> 
-                       <NavItem eventKey={5} href="#products">Products</NavItem> 
+                       <NavItem eventKey={4} href="#complaints">Complaints</NavItem> 
+                       <NavItem eventKey={5} href="#tasks">Tasks</NavItem> 
+                       <NavItem eventKey={6} href="#products">Products</NavItem> 
                     </Nav>
                 </Navbar>
                 <p className="nav-info">Field Staff</p>
@@ -179,13 +182,15 @@ var NavComponent = React.createClass({
            
 var Router = Backbone.Router.extend({
     routes: {
-        orders        : "manageOrders",
-        stock         : "manageStock",
-        customers     : "manageCustomers",
-        registrations : "manageRegistrations",
-        tasks         : "manageTasks",
-        products      : "manageProducts",
-        developer     : "developer"
+        "orders"        : "manageOrders",
+        "stock"         : "manageStock",
+        "customers/:id" : "viewCustomer",
+        "customers"     : "manageCustomers",
+        "complaints"    : "manageComplaints",
+        "registrations" : "manageRegistrations",
+        "tasks"         : "manageTasks",
+        "products"      : "manageProducts",
+        "developer"     : "developer"
     },
     developer: function() {
         React.render(
@@ -205,9 +210,22 @@ var Router = Backbone.Router.extend({
             document.getElementById('main')
         );
     },
+    viewCustomer: function(customerId) {
+        React.render(
+            <CustomersEntityView 
+                customerId={customerId} />,
+            document.getElementById('main')
+        );
+    },
     manageCustomers: function() {
         React.render(
             <CustomersView />,
+            document.getElementById('main')
+        );
+    },
+    manageComplaints: function() {
+        React.render(
+            <ComplaintsView />,
             document.getElementById('main')
         );
     },

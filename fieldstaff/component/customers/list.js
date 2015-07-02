@@ -26,7 +26,25 @@ var CustomersListView = React.createClass({
     },
     render: function() {
         var metadata = [
-            {"columnName": "name", "displayName": "Name"}, 
+            {
+                "columnName": "name", 
+                "displayName": "Name",
+                "customComponent": React.createClass({
+                    render: function() {
+                        var links = this.props.rowData['_links'];
+                        if (links) {
+                            var href = links.self.href;
+                            return (
+                                <a href={'#' + href}>{this.props.rowData.name}</a>
+                            );
+                        } else {
+                            return (
+                                <span>{this.props.rowData.name}</span>
+                            );
+                        }
+                    }
+                })
+            }, 
             {"columnName": "address", "displayName": "Address"}, 
             {"columnName": "tin", "displayName": "TIN number"}, 
             {"columnName": "phone", "displayName": "Phone number"}, 
@@ -39,7 +57,7 @@ var CustomersListView = React.createClass({
                     render: function() {
                         var position = this.props.rowData.position;
                         if (!position || !position.latitude || !position.longitude) {
-                            return (
+                            return ( 
                                 <span>Unknown</span>
                             );
                         }
@@ -48,8 +66,7 @@ var CustomersListView = React.createClass({
                         );
                     }
                 })
-            },
-
+            }
         ];
         return (
             <Panel>

@@ -4,6 +4,7 @@ var Backbone          = require('backbone');
 var Bootstrap         = require('react-bootstrap');
 var CustomerEditForm  = require('../component/customers/edit');
 var CustomersListView = require('../component/customers/list');
+var ComplaintsView    = require('../component/complaints');
 var DataStore         = require('../store/DataStore');
 var Griddle           = require('griddle-react');
 var GroundFork        = require('./groundfork-js/groundfork');
@@ -31,8 +32,8 @@ var api = new GroundFork.Api({
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
-    url: "http://agile-oasis-7393.herokuapp.com/",
-    //url: "http://localhost:3333/",
+    //url: "http://agile-oasis-7393.herokuapp.com/",
+    url: "http://localhost:3333/",
     clientKey: "admin-user1",
     clientSecret: "administrator",
     onRequestStart: function() {},
@@ -162,6 +163,7 @@ var NavComponent = React.createClass({
                 <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
                     <Nav eventKey={0}>
                        <NavItem eventKey={1} href="#customers">Customers</NavItem> 
+                       <NavItem eventKey={2} href="#complaints">Complaints</NavItem> 
                     </Nav>
                 </Navbar>
                 <p className="nav-info">Administration</p>
@@ -173,7 +175,8 @@ var NavComponent = React.createClass({
 var Router = Backbone.Router.extend({
     routes: {
         "customers/edit/:id" : "editCustomer",
-        "customers"          : "manageCustomers"
+        "customers"          : "manageCustomers",
+        "complaints"         : "manageComplaints"
     },
     editCustomer: function(key) {
         React.render(
@@ -185,6 +188,12 @@ var Router = Backbone.Router.extend({
     manageCustomers: function() {
         React.render(
             <CustomersListView />,
+            document.getElementById('main')
+        );
+    },
+    manageComplaints: function() {
+        React.render(
+            <ComplaintsView />,
             document.getElementById('main')
         );
     }

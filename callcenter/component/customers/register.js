@@ -256,6 +256,7 @@ var PriceCategorySelect = React.createClass({
     },
     reset: function() {
         this.setState(this.getInitialState());
+        this.fetchCategories();
     },
     componentDidMount: function() {
         this.fetchCategories();

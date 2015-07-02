@@ -107,7 +107,6 @@ var AddressInput = React.createClass({
                 hasFeedback
                 ref="input"
                 onChange={this.handleChange} />
-
         );
     }
 });
@@ -306,6 +305,7 @@ var PriceCategorySelect = React.createClass({
     },
     reset: function() {
         this.setState(this.getInitialState());
+        this.fetchCategories();
     },
     componentDidMount: function() {
         this.fetchCategories();
