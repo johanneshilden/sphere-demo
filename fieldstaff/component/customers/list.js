@@ -14,17 +14,31 @@ var CustomersListView = React.createClass({
     },
     getInitialState: function() {
         return {
-            data: []
+            data      : [],
+            collapsed : window.innverWidth < 992
         }
+    },
+    handleResize: function(e) {
+        var innerWidth = window.innerWidth,
+            oldVal = this.state.collapsed,
+            newVal = innerWidth < 992;
+        if (oldVal != newVal)
+            this.setState({collapsed: newVal});
     },
     componentDidMount: function() {
         this.fetchCustomers();
         DataStore.on('change', this.fetchCustomers);
+        window.addEventListener('resize', this.handleResize);
+        this.handleResize();
     },
     componentWillUnmount: function() {
         DataStore.removeListener('change', this.fetchCustomers);
+        window.removeEventListener('resize', this.handleResize);
     },
     render: function() {
+        var columns = this.state.collapsed
+            ? ["name", "tin", "area", "priceCategory", "position"]
+            : ["name", "address", "tin", "phone", "area", "priceCategory", "position"];
         var metadata = [
             {
                 "columnName": "name", 
@@ -77,7 +91,7 @@ var CustomersListView = React.createClass({
                     resultsPerPage="20"
                     useGriddleStyles={false}
                     columnMetadata={metadata}
-                    columns={["name", "address", "tin", "phone", "area", "priceCategory", "position"]} />
+                    columns={columns} />
             </Panel>
         );
     }

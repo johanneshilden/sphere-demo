@@ -19,7 +19,7 @@ var NavComponent = React.createClass({
             <div>
                 <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
                 </Navbar>
-                <p className="nav-info">Driver's Application</p>
+                <p className="nav-info">Driver</p>
             </div>
         );
     }

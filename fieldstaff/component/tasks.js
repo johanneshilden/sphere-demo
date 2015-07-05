@@ -8,20 +8,22 @@ var Panel     = Bootstrap.Panel;
 var TasksView = React.createClass({
     getInitialState: function() {
         return {
-            registrationCount: 0
+            tasks: {
+                registrations: [],
+                count: 0
+            }
         };
     },
-    collectTasks: function() {
-        var registrations = DataStore.fetchCollection('registrations');
-        this.setState({registrationCount: registrations.length});
-    },
     componentDidMount: function() {
-        this.collectTasks();
+        var tasks = DataStore.fetchTasks();
+        this.setState({
+            tasks: tasks
+        });
     },
     render: function() {
-        var registrations = '',
-            count = this.state.registrationCount;
-        if (this.state.registrationCount) {
+        var registrations = <span />,
+            count = this.state.tasks.registrations.length;
+        if (count) {
             registrations = (
                 <a href="#registrations" className="list-group-item">
                     You have <b>{count} new customer registration{count > 1 ? 's' : ''}</b> awaiting review.

@@ -26,7 +26,22 @@ var PendingRegistrationsView = React.createClass({
     },
     render: function() {
         var metadata = [
-            {"columnName": "_local", "displayName": "Local"}, 
+            {
+                "columnName": "_local", 
+                "displayName": "Local",
+                "customComponent": React.createClass({
+                    render: function() {
+                        if (this.props.rowData._local)
+                            return (
+                                <span className="glyphicon glyphicon-flag"></span>
+                            );
+                        else
+                            return (
+                                <span />
+                            );
+                    }
+                })
+            }, 
             {"columnName": "name", "displayName": "Name"}, 
             {"columnName": "address", "displayName": "Address"}, 
             {"columnName": "phone", "displayName": "Phone number"}, 

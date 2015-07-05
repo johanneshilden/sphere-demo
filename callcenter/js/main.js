@@ -1,21 +1,23 @@
-var $               = require('jquery');
-var React           = require('react');
-var Backbone        = require('backbone');
-var Bootstrap       = require('react-bootstrap');
-var Griddle         = require('griddle-react');
-var CustomersView   = require('../component/customers');
-var DataStore       = require('../store/DataStore');
-var GroundFork      = require('./groundfork-js/groundfork');
-var AppDispatcher   = require('../dispatcher/AppDispatcher');
+var $                   = require('jquery');
+var React               = require('react');
+var Backbone            = require('backbone');
+var Bootstrap           = require('react-bootstrap');
+var Griddle             = require('griddle-react');
+var CustomersView       = require('../component/customers');
+var CustomersEntityView = require('../component/customers/view');
+var ComplaintsView      = require('../component/complaints');
+var DataStore           = require('../store/DataStore');
+var GroundFork          = require('./groundfork-js/groundfork');
+var AppDispatcher       = require('../dispatcher/AppDispatcher');
 
-var Alert           = Bootstrap.Alert;
-var Button          = Bootstrap.Button;
-var ButtonToolbar   = Bootstrap.ButtonToolbar;
-var Nav             = Bootstrap.Nav;
-var NavItem         = Bootstrap.NavItem;
-var Navbar          = Bootstrap.Navbar;
-var Panel           = Bootstrap.Panel;
-var ProgressBar     = Bootstrap.ProgressBar;
+var Alert               = Bootstrap.Alert;
+var Button              = Bootstrap.Button;
+var ButtonToolbar       = Bootstrap.ButtonToolbar;
+var Nav                 = Bootstrap.Nav;
+var NavItem             = Bootstrap.NavItem;
+var Navbar              = Bootstrap.Navbar;
+var Panel               = Bootstrap.Panel;
+var ProgressBar         = Bootstrap.ProgressBar;
 
 var store = new GroundFork.BrowserStorage({
     namespace: "sphere.callcenter"
@@ -161,6 +163,7 @@ var NavComponent = React.createClass({
                 <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
                     <Nav eventKey={0}>
                        <NavItem eventKey={1} href="#customers">Customers</NavItem> 
+                       <NavItem eventKey={2} href="#complaints">Complaints</NavItem> 
                     </Nav>
                 </Navbar>
                 <p className="nav-info">Call Center</p>
@@ -171,11 +174,26 @@ var NavComponent = React.createClass({
            
 var Router = Backbone.Router.extend({
     routes: {
-        customers: "manageCustomers"
+        "customers/:id" : "viewCustomer",
+        "customers"     : "manageCustomers",
+        "complaints"    : "manageComplaints"
     },
     manageCustomers: function() {
         React.render(
             <CustomersView />,
+            document.getElementById('main')
+        );
+    },
+    viewCustomer: function(customerId) {
+        React.render(
+            <CustomersEntityView 
+                customerId={customerId} />,
+            document.getElementById('main')
+        );
+    },
+    manageComplaints: function() {
+        React.render(
+            <ComplaintsView />,
             document.getElementById('main')
         );
     }
@@ -205,3 +223,4 @@ $('.nav a').on('click', function() {
         $(".navbar-toggle").click();
     }
 });
+

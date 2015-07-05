@@ -20,7 +20,7 @@ var NavComponent = React.createClass({displayName: "NavComponent",
             React.createElement("div", null, 
                 React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, "Sphere"), toggleNavKey: 0}
                 ), 
-                React.createElement("p", {className: "nav-info"}, "Driver's Application")
+                React.createElement("p", {className: "nav-info"}, "Driver")
             )
         );
     }

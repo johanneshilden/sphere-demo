@@ -9,6 +9,12 @@ AppDispatcher.register(function(payload) {
         case 'customer-registration':
             DataStore.registerCustomer(payload.customer);
             break;
+        case 'create-complaint':
+            DataStore.createComplaint(payload.complaint);
+            break;
+        case 'complaint-resolve':
+            DataStore.resolveComplaint(payload.complaintId);
+            break;
         case 'alert':
             DataStore.emit('alert', payload.message);
             break;

@@ -15,6 +15,7 @@ var ComplaintsView      = require('../component/complaints');
 var AppDispatcher       = require('../dispatcher/AppDispatcher');
 
 var Alert               = Bootstrap.Alert;
+var Badge               = Bootstrap.Badge;
 var Button              = Bootstrap.Button;
 var ButtonToolbar       = Bootstrap.ButtonToolbar;
 var Nav                 = Bootstrap.Nav;
@@ -162,6 +163,13 @@ var SyncComponent = React.createClass({
 
 var NavComponent = React.createClass({
     render: function() {
+        var taskCount = DataStore.fetchTasks().count;
+        var badge = <span />;
+        if (taskCount) {
+            badge = (
+                <span>&nbsp;<Badge>{taskCount}</Badge></span>
+            );
+        }
         return (
             <div>
                 <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
@@ -170,7 +178,7 @@ var NavComponent = React.createClass({
                        <NavItem eventKey={2} href="#stock">Stock</NavItem> 
                        <NavItem eventKey={3} href="#customers">Customers</NavItem> 
                        <NavItem eventKey={4} href="#complaints">Complaints</NavItem> 
-                       <NavItem eventKey={5} href="#tasks">Tasks</NavItem> 
+                       <NavItem eventKey={5} href="#tasks">Tasks{badge}</NavItem> 
                        <NavItem eventKey={6} href="#products">Products</NavItem> 
                     </Nav>
                 </Navbar>

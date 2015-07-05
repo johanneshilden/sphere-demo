@@ -34,8 +34,31 @@ var DataStore = assign({}, EventEmitter.prototype, {
         });
         this.emit('change');
         this.emit('new-registration');
-    }
+    },
 
+    createComplaint : function(complaint) {
+        complaint._local = 'true';
+        var response = this.api.command({
+            method   : 'POST',
+            resource : 'complaints',
+            payload  : complaint 
+        });
+        this.emit('change');
+        this.emit('new-complaint');
+        this.emit('alert', 'The complaint was registered.');
+    },
+
+    resolveComplaint: function(complaintId) {
+        this.api.command({
+            method   : 'PATCH',
+            resource : complaintId,
+            payload  : {
+                resolved: Date.now()
+            }
+        });
+        this.emit('change');
+    }
+ 
 });
 
 module.exports = DataStore;
