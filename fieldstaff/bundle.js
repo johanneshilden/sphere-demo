@@ -214,7 +214,6 @@ var ComplaintsView = React.createClass({displayName: "ComplaintsView",
         this.setState({showModal: false});
     },
     render: function() {
-        var title = React.createElement("h4", null, "Complaints");
         var self = this;
         var columns = this.state.collapsed
             ? ["customer", "created", "type", "resolved", "actions"]
@@ -297,7 +296,7 @@ var ComplaintsView = React.createClass({displayName: "ComplaintsView",
                         handleClose: this.closeModal, 
                         complaintId: this.state.selectedComplaint})
                 ), 
-                React.createElement(Panel, {header: title}, 
+                React.createElement(Panel, {header: "Complaints"}, 
                     React.createElement(Griddle, {
                         results: this.state.data, 
                         tableClassName: "table table-bordered", 
@@ -1761,9 +1760,8 @@ var OrdersListView = React.createClass({displayName: "OrdersListView",
             {"columnName": "area", "displayName": "Area"}, 
             {"columnName": "priceCategory", "displayName": "Price category"}
         ];
-        var title = React.createElement("h4", null, "Orders");
         return (
-            React.createElement(Panel, {header: title}, 
+            React.createElement(Panel, {header: "Orders"}, 
                 React.createElement(Griddle, {
                     results: this.state.data, 
                     tableClassName: "table table-bordered", 
@@ -1805,14 +1803,13 @@ var ProductsView = React.createClass({displayName: "ProductsView",
         DataStore.removeListener('change', this.fetchProducts);
     },
     render: function() {
-        var title = React.createElement("h4", null, "Products");
         var metadata = [
             {"columnName": "sku", "displayName": "SKU"}, 
             {"columnName": "name", "displayName": "Name"}, 
             {"columnName": "unitSize", "displayName": "Unit size"}
         ];
         return (
-            React.createElement(Panel, {header: title}, 
+            React.createElement(Panel, {header: "Products"}, 
                 React.createElement(Griddle, {
                     results: this.state.data, 
                     showFilter: true, 
@@ -1864,9 +1861,8 @@ var StockListView = React.createClass({displayName: "StockListView",
             {"columnName": "area", "displayName": "Area"}, 
             {"columnName": "priceCategory", "displayName": "Price category"}
         ];
-        var title = React.createElement("h4", null, "Stock");
         return (
-            React.createElement(Panel, {header: title}, 
+            React.createElement(Panel, {header: "Stock"}, 
                 React.createElement(Griddle, {
                     results: this.state.data, 
                     tableClassName: "table table-bordered", 
@@ -2677,8 +2673,8 @@ var api = new GroundFork.Api({
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
-    url: "http://agile-oasis-7393.herokuapp.com/",
-    //url: "http://localhost:3333/",
+    //url: "http://agile-oasis-7393.herokuapp.com/",
+    url: "http://localhost:3333/",
     clientKey: "fieldstaff-user1",
     clientSecret: "fieldstaff",
     onRequestStart: function() {},
@@ -2802,8 +2798,26 @@ var SyncComponent = React.createClass({displayName: "SyncComponent",
 });
 
 var NavComponent = React.createClass({displayName: "NavComponent",
-    render: function() {
+    getInitialState: function() {
+        return {
+            taskCount: 0
+        };
+    },
+    fetchTaskCount: function() {
         var taskCount = DataStore.fetchTasks().count;
+        this.setState({
+            taskCount: taskCount
+        });
+    },
+    componentDidMount: function() {
+        DataStore.on('change', this.fetchTaskCount);
+        this.fetchTaskCount();
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchTaskCount);
+    },
+    render: function() {
+        var taskCount = this.state.taskCount;
         var badge = React.createElement("span", null);
         if (taskCount) {
             badge = (

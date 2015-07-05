@@ -23,14 +23,13 @@ var ProductsView = React.createClass({
         DataStore.removeListener('change', this.fetchProducts);
     },
     render: function() {
-        var title = <h4>Products</h4>;
         var metadata = [
             {"columnName": "sku", "displayName": "SKU"}, 
             {"columnName": "name", "displayName": "Name"}, 
             {"columnName": "unitSize", "displayName": "Unit size"}
         ];
         return (
-            <Panel header={title}>
+            <Panel header="Products">
                 <Griddle 
                     results={this.state.data} 
                     showFilter={true}

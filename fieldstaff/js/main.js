@@ -162,8 +162,26 @@ var SyncComponent = React.createClass({
 });
 
 var NavComponent = React.createClass({
-    render: function() {
+    getInitialState: function() {
+        return {
+            taskCount: 0
+        };
+    },
+    fetchTaskCount: function() {
         var taskCount = DataStore.fetchTasks().count;
+        this.setState({
+            taskCount: taskCount
+        });
+    },
+    componentDidMount: function() {
+        DataStore.on('change', this.fetchTaskCount);
+        this.fetchTaskCount();
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchTaskCount);
+    },
+    render: function() {
+        var taskCount = this.state.taskCount;
         var badge = <span />;
         if (taskCount) {
             badge = (

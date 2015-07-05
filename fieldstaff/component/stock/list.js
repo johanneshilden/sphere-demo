@@ -33,9 +33,8 @@ var StockListView = React.createClass({
             {"columnName": "area", "displayName": "Area"}, 
             {"columnName": "priceCategory", "displayName": "Price category"}
         ];
-        var title = <h4>Stock</h4>;
         return (
-            <Panel header={title}>
+            <Panel header="Stock">
                 <Griddle 
                     results={this.state.data} 
                     tableClassName="table table-bordered" 

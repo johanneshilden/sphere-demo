@@ -214,7 +214,6 @@ var ComplaintsView = React.createClass({displayName: "ComplaintsView",
         this.setState({showModal: false});
     },
     render: function() {
-        var title = React.createElement("h4", null, "Complaints");
         var self = this;
         var columns = this.state.collapsed
             ? ["customer", "created", "type", "resolved", "actions"]
@@ -297,7 +296,7 @@ var ComplaintsView = React.createClass({displayName: "ComplaintsView",
                         handleClose: this.closeModal, 
                         complaintId: this.state.selectedComplaint})
                 ), 
-                React.createElement(Panel, {header: title}, 
+                React.createElement(Panel, {header: "Complaints"}, 
                     React.createElement(Griddle, {
                         results: this.state.data, 
                         tableClassName: "table table-bordered", 
@@ -2312,8 +2311,8 @@ var api = new GroundFork.Api({
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
-    url: "http://agile-oasis-7393.herokuapp.com/",
-    //url: "http://localhost:3333/",
+    //url: "http://agile-oasis-7393.herokuapp.com/",
+    url: "http://localhost:3333/",
     clientKey: "callcenter-user1",
     clientSecret: "callcenter",
     onRequestStart: function() {},

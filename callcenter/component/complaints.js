@@ -213,7 +213,6 @@ var ComplaintsView = React.createClass({
         this.setState({showModal: false});
     },
     render: function() {
-        var title = <h4>Complaints</h4>;
         var self = this;
         var columns = this.state.collapsed
             ? ["customer", "created", "type", "resolved", "actions"]
@@ -296,7 +295,7 @@ var ComplaintsView = React.createClass({
                         handleClose={this.closeModal}
                         complaintId={this.state.selectedComplaint} />
                 </Modal>
-                <Panel header={title}>
+                <Panel header="Complaints">
                     <Griddle 
                         results={this.state.data} 
                         tableClassName="table table-bordered" 

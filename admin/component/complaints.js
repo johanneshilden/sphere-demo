@@ -32,7 +32,6 @@ var ComplaintsView = React.createClass({
         DataStore.removeListener('change', this.fetchComplaints);
     },
     render: function() {
-        var title = <h4>Complaints</h4>;
         var metadata = [
             {
                 "columnName": "customer", 
@@ -72,7 +71,7 @@ var ComplaintsView = React.createClass({
             {"columnName": "description", "displayName": "Description"}
         ];
         return (
-            <Panel header={title}>
+            <Panel header="Complaints">
                 <Griddle 
                     results={this.state.data} 
                     tableClassName="table table-bordered" 

@@ -25,15 +25,18 @@
             user-select: none;
         }
         .nav-info {
-            background: #ecf0f1;
             padding: 0.5em 1em 0.6em;
             margin-top: 60px;
         }
         table.type-ahead td {
             cursor: pointer;
         }
-        nav.navbar {
+        nav.navbar,
+        .panel-heading {
             background: top left url('../common/assets/images/streambk.png');
+        }
+        .panel-default > .panel-heading {
+            color: #fff;
         }
         .navbar-collapse .navbar-nav {
             margin: 0 -15px;
@@ -43,6 +46,13 @@
         }
         .navbar-brand {
             margin-right: 1em;
+        }
+        .nav > li > a:hover, 
+        .nav > li > a:focus {
+            background-color: #e2e2e2;
+        }
+        body {
+            background: top left url('../common/assets/images/body.jpg');
         }
     </style>
     <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->

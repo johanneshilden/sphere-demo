@@ -33,7 +33,6 @@ var ComplaintsView = React.createClass({displayName: "ComplaintsView",
         DataStore.removeListener('change', this.fetchComplaints);
     },
     render: function() {
-        var title = React.createElement("h4", null, "Complaints");
         var metadata = [
             {
                 "columnName": "customer", 
@@ -73,7 +72,7 @@ var ComplaintsView = React.createClass({displayName: "ComplaintsView",
             {"columnName": "description", "displayName": "Description"}
         ];
         return (
-            React.createElement(Panel, {header: title}, 
+            React.createElement(Panel, {header: "Complaints"}, 
                 React.createElement(Griddle, {
                     results: this.state.data, 
                     tableClassName: "table table-bordered", 
@@ -1392,8 +1391,8 @@ var api = new GroundFork.Api({
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api: api,
-    url: "http://agile-oasis-7393.herokuapp.com/",
-    //url: "http://localhost:3333/",
+    //url: "http://agile-oasis-7393.herokuapp.com/",
+    url: "http://localhost:3333/",
     clientKey: "admin-user1",
     clientSecret: "administrator",
     onRequestStart: function() {},
