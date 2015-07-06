@@ -133,7 +133,7 @@ var ComplaintsEntityView = React.createClass({
             <div>
                 <Modal.Header closeButton onHide={this.handleClose}>
                     <Modal.Title>
-                        Details
+                        Complaint details
                     </Modal.Title>
                 </Modal.Header>
                 <Modal.Body>

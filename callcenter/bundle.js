@@ -134,7 +134,7 @@ var ComplaintsEntityView = React.createClass({displayName: "ComplaintsEntityView
             React.createElement("div", null, 
                 React.createElement(Modal.Header, {closeButton: true, onHide: this.handleClose}, 
                     React.createElement(Modal.Title, null, 
-                        "Details"
+                        "Complaint details"
                     )
                 ), 
                 React.createElement(Modal.Body, null, 
