@@ -51,6 +51,7 @@ nav.navbar,
 
 body {
     background: top left url('../images/body.jpg');
+    color: #3e3e3e;
 }
 
 .navbar-default .navbar-toggle {
@@ -82,4 +83,20 @@ body {
 
 .panel-fill ul.nav-tabs {
     background: #fafafa;
+}
+
+a {
+    color: #21c2f8;
+}
+
+a:hover, a:focus {
+    color: #21c2f8;
+}
+
+.navbar-default .navbar-nav > li > a:hover {
+    color: #21c2f8;
+}
+
+.navbar-default .navbar-nav > li > a:focus {
+    color: #fff;
 }
