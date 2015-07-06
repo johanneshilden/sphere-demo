@@ -920,7 +920,7 @@ React.render(
 );
 
 // Close responsive Bootstrap nav when selecting an item
-$('.navbar-collapse a').on('click', function() {
+$('.navbar-fixed-top a').on('click', function() {
     if ($('body').width() < 768) {
         $(".navbar-toggle").click();
     }

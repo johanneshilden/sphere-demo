@@ -7,6 +7,7 @@ var DataStore                = require('../store/DataStore');
 
 var TabbedArea               = Bootstrap.TabbedArea;
 var TabPane                  = Bootstrap.TabPane;
+var Panel                    = Bootstrap.Panel;
 
 var CustomersView = React.createClass({
     getInitialState: function() {
@@ -28,10 +29,8 @@ var CustomersView = React.createClass({
     },
     render: function() {
         return (
-            <div>
-                <h4>Customers</h4>
-                <hr />
-                <TabbedArea activeKey={this.state.key} onSelect={this.handleSelect}>
+            <Panel className="panel-fill" header="Customers">
+                <TabbedArea fill activeKey={this.state.key} onSelect={this.handleSelect}>
                     <TabPane eventKey={1} tab="Customers">
                         <CustomersListView />
                     </TabPane>
@@ -42,7 +41,7 @@ var CustomersView = React.createClass({
                         <PendingRegistrationsView />
                     </TabPane>
                 </TabbedArea>
-            </div>
+            </Panel>
         );
     }
 });

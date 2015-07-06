@@ -930,6 +930,7 @@ var DataStore                = require('../store/DataStore');
 
 var TabbedArea               = Bootstrap.TabbedArea;
 var TabPane                  = Bootstrap.TabPane;
+var Panel                    = Bootstrap.Panel;
 
 var CustomersView = React.createClass({displayName: "CustomersView",
     getInitialState: function() {
@@ -951,10 +952,8 @@ var CustomersView = React.createClass({displayName: "CustomersView",
     },
     render: function() {
         return (
-            React.createElement("div", null, 
-                React.createElement("h4", null, "Customers"), 
-                React.createElement("hr", null), 
-                React.createElement(TabbedArea, {activeKey: this.state.key, onSelect: this.handleSelect}, 
+            React.createElement(Panel, {className: "panel-fill", header: "Customers"}, 
+                React.createElement(TabbedArea, {fill: true, activeKey: this.state.key, onSelect: this.handleSelect}, 
                     React.createElement(TabPane, {eventKey: 1, tab: "Customers"}, 
                         React.createElement(CustomersListView, null)
                     ), 
@@ -2497,7 +2496,7 @@ React.render(
 );
 
 // Close responsive Bootstrap nav when selecting an item
-$('.nav a').on('click', function() {
+$('.navbar-fixed-top a').on('click', function() {
     if ($('body').width() < 768) {
         $(".navbar-toggle").click();
     }
