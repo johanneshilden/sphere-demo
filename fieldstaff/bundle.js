@@ -2796,11 +2796,44 @@ var SyncComponent = React.createClass({displayName: "SyncComponent",
     }
 });
 
+var menuItems = [
+    {
+        href: '#orders',
+        label: 'Orders'
+    },
+    {
+        href: '#stock',
+        label: 'Stock'
+    },
+    {
+        href: '#customers',
+        label: 'Customers'
+    },
+    {
+        href: '#complaints',
+        label: 'Complaints'
+    },
+    {
+        href: '#tasks',
+        label: 'Tasks'
+    },
+    {
+        href: '#products',
+        label: 'Products'
+    },
+];
+
 var NavComponent = React.createClass({displayName: "NavComponent",
     getInitialState: function() {
         return {
-            taskCount: 0
+            taskCount: 0,
+            active: 0
         };
+    },
+    switchKey: function(key) {
+        this.setState({
+            active: key
+        });
     },
     fetchTaskCount: function() {
         var taskCount = DataStore.fetchTasks().count;
@@ -2810,29 +2843,35 @@ var NavComponent = React.createClass({displayName: "NavComponent",
     },
     componentDidMount: function() {
         DataStore.on('change', this.fetchTaskCount);
+        DataStore.on('menu-key', this.switchKey);
         this.fetchTaskCount();
     },
     componentWillUnmount: function() {
         DataStore.removeListener('change', this.fetchTaskCount);
+        DataStore.removeListener('menu-key', this.switchKey);
     },
     render: function() {
-        var taskCount = this.state.taskCount;
+       var taskCount = this.state.taskCount;
         var badge = React.createElement("span", null);
         if (taskCount) {
             badge = (
                 React.createElement("span", null, " ", React.createElement(Badge, null, taskCount))
             );
         }
+        var items = [];
+        for (var i = 0; i < menuItems.length; i++) {
+            var item = menuItems[i],
+                key = i + 1;
+            var navItem = (
+                React.createElement(NavItem, {key: key, active: key === this.state.active, eventKey: key, href: item.href}, item.label, '#tasks' === item.href ? badge : '') 
+            );
+            items.push(navItem);
+        }
         return (
             React.createElement("div", null, 
                 React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, "Sphere"), toggleNavKey: 0}, 
                     React.createElement(Nav, {eventKey: 0}, 
-                       React.createElement(NavItem, {eventKey: 1, href: "#orders"}, "Orders"), 
-                       React.createElement(NavItem, {eventKey: 2, href: "#stock"}, "Stock"), 
-                       React.createElement(NavItem, {eventKey: 3, href: "#customers"}, "Customers"), 
-                       React.createElement(NavItem, {eventKey: 4, href: "#complaints"}, "Complaints"), 
-                       React.createElement(NavItem, {eventKey: 5, href: "#tasks"}, "Tasks", badge), 
-                       React.createElement(NavItem, {eventKey: 6, href: "#products"}, "Products")
+                        items
                     )
                 ), 
                 React.createElement("p", {className: "nav-info"}, "Field Staff")
@@ -2864,12 +2903,14 @@ var Router = Backbone.Router.extend({
             React.createElement(OrdersView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 1);
     },
     manageStock: function() {
         React.render(
             React.createElement(StockView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 2);
     },
     viewCustomer: function(customerId) {
         React.render(
@@ -2877,36 +2918,42 @@ var Router = Backbone.Router.extend({
                 customerId: customerId}),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 3);
     },
     manageCustomers: function() {
         React.render(
             React.createElement(CustomersView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 3);
     },
     manageComplaints: function() {
         React.render(
             React.createElement(ComplaintsView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 4);
     },
     manageRegistrations: function() {
         React.render(
             React.createElement(CustomersView, {tab: 3}),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 4);
     },
     manageTasks: function() {
         React.render(
             React.createElement(TasksView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 5);
     },
     manageProducts: function() {
         React.render(
             React.createElement(ProductsView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 6);
     }
 });
 

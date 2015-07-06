@@ -161,11 +161,44 @@ var SyncComponent = React.createClass({
     }
 });
 
+var menuItems = [
+    {
+        href: '#orders',
+        label: 'Orders'
+    },
+    {
+        href: '#stock',
+        label: 'Stock'
+    },
+    {
+        href: '#customers',
+        label: 'Customers'
+    },
+    {
+        href: '#complaints',
+        label: 'Complaints'
+    },
+    {
+        href: '#tasks',
+        label: 'Tasks'
+    },
+    {
+        href: '#products',
+        label: 'Products'
+    },
+];
+
 var NavComponent = React.createClass({
     getInitialState: function() {
         return {
-            taskCount: 0
+            taskCount: 0,
+            active: 0
         };
+    },
+    switchKey: function(key) {
+        this.setState({
+            active: key
+        });
     },
     fetchTaskCount: function() {
         var taskCount = DataStore.fetchTasks().count;
@@ -175,29 +208,35 @@ var NavComponent = React.createClass({
     },
     componentDidMount: function() {
         DataStore.on('change', this.fetchTaskCount);
+        DataStore.on('menu-key', this.switchKey);
         this.fetchTaskCount();
     },
     componentWillUnmount: function() {
         DataStore.removeListener('change', this.fetchTaskCount);
+        DataStore.removeListener('menu-key', this.switchKey);
     },
     render: function() {
-        var taskCount = this.state.taskCount;
+       var taskCount = this.state.taskCount;
         var badge = <span />;
         if (taskCount) {
             badge = (
                 <span>&nbsp;<Badge>{taskCount}</Badge></span>
             );
         }
+        var items = [];
+        for (var i = 0; i < menuItems.length; i++) {
+            var item = menuItems[i],
+                key = i + 1;
+            var navItem = (
+                <NavItem key={key} active={key === this.state.active} eventKey={key} href={item.href}>{item.label}{'#tasks' === item.href ? badge : ''}</NavItem> 
+            );
+            items.push(navItem);
+        }
         return (
             <div>
                 <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
                     <Nav eventKey={0}>
-                       <NavItem eventKey={1} href="#orders">Orders</NavItem> 
-                       <NavItem eventKey={2} href="#stock">Stock</NavItem> 
-                       <NavItem eventKey={3} href="#customers">Customers</NavItem> 
-                       <NavItem eventKey={4} href="#complaints">Complaints</NavItem> 
-                       <NavItem eventKey={5} href="#tasks">Tasks{badge}</NavItem> 
-                       <NavItem eventKey={6} href="#products">Products</NavItem> 
+                        {items}
                     </Nav>
                 </Navbar>
                 <p className="nav-info">Field Staff</p>
@@ -229,12 +268,14 @@ var Router = Backbone.Router.extend({
             <OrdersView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 1);
     },
     manageStock: function() {
         React.render(
             <StockView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 2);
     },
     viewCustomer: function(customerId) {
         React.render(
@@ -242,36 +283,42 @@ var Router = Backbone.Router.extend({
                 customerId={customerId} />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 3);
     },
     manageCustomers: function() {
         React.render(
             <CustomersView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 3);
     },
     manageComplaints: function() {
         React.render(
             <ComplaintsView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 4);
     },
     manageRegistrations: function() {
         React.render(
             <CustomersView tab={3} />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 4);
     },
     manageTasks: function() {
         React.render(
             <TasksView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 5);
     },
     manageProducts: function() {
         React.render(
             <ProductsView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 6);
     }
 });
 

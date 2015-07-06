@@ -156,14 +156,49 @@ var SyncComponent = React.createClass({
     }
 });
 
+var menuItems = [
+    { 
+        href: '#customers',
+        label: 'Customers'
+    },
+    {
+        href: '#complaints',
+        label: 'Complaints'
+    }
+];
+
 var NavComponent = React.createClass({
+    getInitialState: function() {
+        return {
+            active: 0
+        };
+    },
+    switchKey: function(key) {
+        this.setState({
+            active: key
+        });
+    },
+    componentDidMount: function() {
+        DataStore.on('menu-key', this.switchKey);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('menu-key', this.switchKey);
+    },
     render: function() {
+        var items = [];
+        for (var i = 0; i < menuItems.length; i++) {
+            var item = menuItems[i],
+                key = i + 1;
+            var navItem = (
+                <NavItem key={key} active={key === this.state.active} eventKey={key} href={item.href}>{item.label}</NavItem> 
+            );
+            items.push(navItem);
+        }
         return (
             <div>
                 <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
                     <Nav eventKey={0}>
-                       <NavItem eventKey={1} href="#customers">Customers</NavItem> 
-                       <NavItem eventKey={2} href="#complaints">Complaints</NavItem> 
+                        {items}
                     </Nav>
                 </Navbar>
                 <p className="nav-info">Administration</p>
@@ -171,7 +206,7 @@ var NavComponent = React.createClass({
         );
     }
 });
-           
+
 var Router = Backbone.Router.extend({
     routes: {
         "customers/edit/:id" : "editCustomer",
@@ -184,18 +219,21 @@ var Router = Backbone.Router.extend({
                 customerId={key} />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 1);
     },
     manageCustomers: function() {
         React.render(
             <CustomersListView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 1);
     },
     manageComplaints: function() {
         React.render(
             <ComplaintsView />,
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 2);
     }
 });
 

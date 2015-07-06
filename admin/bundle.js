@@ -1515,14 +1515,49 @@ var SyncComponent = React.createClass({displayName: "SyncComponent",
     }
 });
 
+var menuItems = [
+    { 
+        href: '#customers',
+        label: 'Customers'
+    },
+    {
+        href: '#complaints',
+        label: 'Complaints'
+    }
+];
+
 var NavComponent = React.createClass({displayName: "NavComponent",
+    getInitialState: function() {
+        return {
+            active: 0
+        };
+    },
+    switchKey: function(key) {
+        this.setState({
+            active: key
+        });
+    },
+    componentDidMount: function() {
+        DataStore.on('menu-key', this.switchKey);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('menu-key', this.switchKey);
+    },
     render: function() {
+        var items = [];
+        for (var i = 0; i < menuItems.length; i++) {
+            var item = menuItems[i],
+                key = i + 1;
+            var navItem = (
+                React.createElement(NavItem, {key: key, active: key === this.state.active, eventKey: key, href: item.href}, item.label) 
+            );
+            items.push(navItem);
+        }
         return (
             React.createElement("div", null, 
                 React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, "Sphere"), toggleNavKey: 0}, 
                     React.createElement(Nav, {eventKey: 0}, 
-                       React.createElement(NavItem, {eventKey: 1, href: "#customers"}, "Customers"), 
-                       React.createElement(NavItem, {eventKey: 2, href: "#complaints"}, "Complaints")
+                        items
                     )
                 ), 
                 React.createElement("p", {className: "nav-info"}, "Administration")
@@ -1530,7 +1565,7 @@ var NavComponent = React.createClass({displayName: "NavComponent",
         );
     }
 });
-           
+
 var Router = Backbone.Router.extend({
     routes: {
         "customers/edit/:id" : "editCustomer",
@@ -1543,18 +1578,21 @@ var Router = Backbone.Router.extend({
                 customerId: key}),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 1);
     },
     manageCustomers: function() {
         React.render(
             React.createElement(CustomersListView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 1);
     },
     manageComplaints: function() {
         React.render(
             React.createElement(ComplaintsView, null),
             document.getElementById('main')
         );
+        DataStore.emit('menu-key', 2);
     }
 });
 
