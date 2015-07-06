@@ -61,8 +61,8 @@ fs.readFile('install.json', 'utf8', function (err, data) {
         };
 
         request.post({
-            url: 'http://agile-oasis-7393.herokuapp.com/sync', 
-            //url: 'http://localhost:3333/sync', 
+            url: "http://agile-oasis-7393.herokuapp.com/sync", 
+            //url: "http://localhost:3333/sync", 
             headers: {'Content-Type': 'application/json'},
             body: data,
             json: true,
