@@ -5,3 +5,4 @@
 (cd driver     ; ./build.sh)
 (cd fieldstaff ; ./build.sh)
 (cd queueing   ; ./build.sh)
+(cd depot      ; ./build.sh)

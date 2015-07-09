@@ -4,11 +4,15 @@ var DataStore                = require('../../store/DataStore');
 
 var ServiceComplaintRegistrationForm = require('../complaints/service/register');
 var QualityComplaintRegistrationForm = require('../complaints/quality/register');
+var CustomerContactsView             = require('./contacts');
 
 var Modal                    = Bootstrap.Modal;
 var ModalBody                = Bootstrap.Modal.Body;
 var ModalHeader              = Bootstrap.Modal.Header;
 var ModalTitle               = Bootstrap.Modal.Title;
+var TabbedArea               = Bootstrap.TabbedArea;
+var TabPane                  = Bootstrap.TabPane;
+var Panel                    = Bootstrap.Panel;
 
 var CustomersEntityView = React.createClass({
     fetchCustomerData: function() {
@@ -17,6 +21,10 @@ var CustomersEntityView = React.createClass({
     },
     componentDidMount: function() {
         this.fetchCustomerData();
+        DataStore.on('change', this.fetchCustomerData);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchCustomerData);
     },
     getInitialState: function() {
         return {
@@ -64,16 +72,24 @@ var CustomersEntityView = React.createClass({
                             customer={this.state.customer} />
                     </ModalBody>
                 </Modal>
-                <h4>{customer.name}</h4>
-                <hr />
-                <ul>
-                    <li>
-                        <a onClick={this.openServiceComplaintModal} href="javascript:">Register service complaint</a>
-                    </li>
-                    <li>
-                        <a onClick={this.openQualityComplaintModal} href="javascript:">Register quality complaint</a>
-                    </li>
-                </ul>
+                <Panel className="panel-fill" header={customer.name}>
+                    <TabbedArea fill activeKey={this.state.key} onSelect={this.handleSelect}>
+                        <TabPane eventKey={1} tab="Overview">
+                            <ul>
+                                <li>
+                                    <a onClick={this.openServiceComplaintModal} href="javascript:">Register service complaint</a>
+                                </li>
+                                <li>
+                                    <a onClick={this.openQualityComplaintModal} href="javascript:">Register quality complaint</a>
+                                </li>
+                            </ul>
+                        </TabPane>
+                        <TabPane eventKey={2} tab="Contact details">
+                            <CustomerContactsView
+                                customer={this.state.customer} />
+                        </TabPane>
+                    </TabbedArea>
+                </Panel>
             </div>
         );
     }

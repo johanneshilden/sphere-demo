@@ -15,6 +15,12 @@ AppDispatcher.register(function(payload) {
         case 'complaint-resolve':
             DataStore.resolveComplaint(payload.complaintId);
             break;
+        case 'create-contact':
+            DataStore.createContact(payload.contact);
+            break;
+        case 'delete-contact':
+            DataStore.deleteContact(payload.contact);
+            break;
         case 'alert':
             DataStore.emit('alert', payload.message);
             break;

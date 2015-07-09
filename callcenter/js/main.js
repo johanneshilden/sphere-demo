@@ -23,11 +23,63 @@ var store = new GroundFork.BrowserStorage({
     namespace: "sphere.callcenter"
 });
 
+function embed(collection) {
+    var links = collection['_links']['contacts']
+        contacts = [];
+    for (var i = 0; i < links.length; i++) {
+        var item = this.getItem(links[i].href);
+        if (item)
+            contacts.push(item);
+    }
+    if (!collection.hasOwnProperty('_embedded')) 
+        collection['_embedded'] = {};
+    collection['_embedded']['contacts'] = contacts;
+}
+
 var api = new GroundFork.Api({
     storage: store,
-    debugMode: false,
+    debugMode: true,
     onBatchJobStart: function() {},
-    onBatchJobComplete: function() {}
+    onBatchJobComplete: function() {},
+    patterns: {
+        "POST/contacts": function(context, request) {
+            var payload = request.payload,
+                uri = this.getSelfHref(payload);
+            this.insertItem(uri, payload, false);
+            var customer = request.payload['_links'].customer.href;
+            this.addToCollection(customer, uri, 'contacts');
+
+            // Embed contacts in local customer object
+            this.updateCollectionWith(customer, embed.bind(this));
+
+            return {
+                "status" : 'success',
+                "data"   : payload
+            };
+        },
+        "DELETE/contacts/:id": function(context) {
+            var item = this.getItem('contacts/' + context.id);
+            if (!item) {
+                return { 
+                    "status"   : 'error',
+                    "_error"   : "MISSING_KEY", 
+                    "resource" : 'contacts/' + context.id
+                };
+            }
+            var customer = item['_links'].customer.href;
+            this.removeItem('contacts/' + context.id);
+            this.removeFromCollection(customer, 'contacts/' + context.id, 'contacts');
+            
+            // Update embedded contacts
+            this.updateCollectionWith(customer, embed.bind(this));
+
+            return {
+                "status"   : 'success',
+                "resource" : 'contacts/' + context.id,
+                "data"     : item
+            };
+        }
+    }
 });
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
@@ -261,3 +313,22 @@ $('.navbar-fixed-top a').on('click', function() {
         $(".navbar-toggle").click();
     }
 });
+
+var websocket = new WebSocket("ws://agile-oasis-7393.herokuapp.com/"); 
+
+websocket.onopen = function(e) { 
+    console.log('WebSocket connection established.');
+}; 
+
+websocket.onclose = function(e) { 
+    console.log('WebSocket connection established.');
+}; 
+
+websocket.onmessage = function(e) { 
+    console.log('<message>');
+    console.log(e);
+}; 
+
+websocket.onerror = function(e) { 
+    console.log('error');
+};

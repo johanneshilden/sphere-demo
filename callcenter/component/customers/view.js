@@ -1,14 +1,19 @@
 var React                    = require('react');
 var Bootstrap                = require('react-bootstrap');
 var DataStore                = require('../../store/DataStore');
+var AppDispatcher            = require('../../dispatcher/AppDispatcher');
 
 var ServiceComplaintRegistrationForm = require('../complaints/service/register');
 var QualityComplaintRegistrationForm = require('../complaints/quality/register');
 
+var Input                    = Bootstrap.Input;
+var Button                   = Bootstrap.Button;
+var Panel                    = Bootstrap.Panel;
 var Modal                    = Bootstrap.Modal;
 var ModalBody                = Bootstrap.Modal.Body;
 var ModalHeader              = Bootstrap.Modal.Header;
 var ModalTitle               = Bootstrap.Modal.Title;
+var Table                    = Bootstrap.Table;
 
 var CustomersEntityView = React.createClass({
     fetchCustomerData: function() {
@@ -17,6 +22,10 @@ var CustomersEntityView = React.createClass({
     },
     componentDidMount: function() {
         this.fetchCustomerData();
+        DataStore.on('change', this.fetchCustomerData);
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchCustomerData);
     },
     getInitialState: function() {
         return {

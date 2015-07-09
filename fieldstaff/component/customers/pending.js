@@ -21,8 +21,25 @@ var PendingRegistrationsView = React.createClass({
     },
     getInitialState: function() {
         return {
-            data: []
+            data: [],
+            showModal: false,
+            href: null
         }
+    },
+    handleDelete: function() {
+        AppDispatcher.dispatch({
+            actionType: 'delete-registration',
+            href: this.state.href
+        });
+    },
+    closeModal: function() {
+        this.setState({showModal: false});
+    },
+    confirmDelete: function(href) {
+        this.setState({
+            showModal: true,
+            href: href
+        });
     },
     componentDidMount: function() {
         this.fetchRegistrations();
@@ -32,6 +49,7 @@ var PendingRegistrationsView = React.createClass({
         DataStore.removeListener('change', this.fetchRegistrations);
     },
     render: function() {
+        var self = this;
         var metadata = [
             {
                 "columnName": "name", 
@@ -66,33 +84,37 @@ var PendingRegistrationsView = React.createClass({
                 "columnName": "actions", 
                 "displayName": "",
                 "customComponent": React.createClass({
-                    handleDelete: function() {
-                        AppDispatcher.dispatch({
-                            actionType: 'delete-registration',
-                            href: this.props.rowData.href
-                        });
-                    },
                     render: function() {
                         return (
-                            <ModalTrigger modal={<DeleteRegistrationModal deleteHandler={this.handleDelete} />}>
-                                <a href="javascript:">Delete</a>
-                            </ModalTrigger>
+                            <Button
+                                bsSize="xsmall"
+                                bsStyle="default"
+                                onClick={self.confirmDelete.bind(null, this.props.rowData.href)}>
+                                <span className="glyphicon glyphicon-remove" aria-hidden="true"></span>
+                                &nbsp;Delete
+                            </Button>
                         );
                     }
                 })
             }
         ];
         return (
-            <Panel>
-                <Griddle 
-                    results={this.state.data} 
-                    tableClassName="table table-bordered" 
-                    showFilter={true}
-                    resultsPerPage="20"
-                    useGriddleStyles={false}
-                    columnMetadata={metadata}
-                    columns={["name", "address", "phone", "priceCategory", "area", "actions"]} />
-            </Panel>
+            <div>
+                <DeleteRegistrationModal 
+                    show={this.state.showModal}
+                    deleteHandler={this.handleDelete} 
+                    closeHandler={this.closeModal} />
+                <Panel>
+                    <Griddle 
+                        results={this.state.data} 
+                        tableClassName="table table-bordered" 
+                        showFilter={true}
+                        resultsPerPage="20"
+                        useGriddleStyles={false}
+                        columnMetadata={metadata}
+                        columns={["name", "address", "phone", "priceCategory", "area", "actions"]} />
+                </Panel>
+            </div>
         );
     }
 });
@@ -100,18 +122,21 @@ var PendingRegistrationsView = React.createClass({
 var DeleteRegistrationModal = React.createClass({
     handleConfirm: function() {
         this.props.deleteHandler();
-        this.props.onRequestHide();
+        this.props.closeHandler();
     },
     render: function() {
         return (
-            <Modal title="Confirm action" onRequestHide={this.props.onRequestHide}>
-                <div className="modal-body">
+            <Modal show={this.props.show} title="" onHide={this.props.closeHandler}>
+                <Modal.Header>
+                    <Modal.Title>Confirm action</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
                     Are you sure?
-                </div>
-                <div className="modal-footer">
-                    <Button onClick={this.props.onRequestHide}>Cancel</Button>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button onClick={this.props.closeHandler}>Cancel</Button>
                     <Button bsStyle="primary" onClick={this.handleConfirm}>Delete</Button>
-                </div>
+                </Modal.Footer>
             </Modal>
         );
     }

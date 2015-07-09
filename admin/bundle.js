@@ -617,7 +617,9 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
                             );
                         }
                         return (
-                            React.createElement("span", null, React.createElement("a", {href: 'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'}, "Show"))
+                            React.createElement("a", {href: 'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16', className: "btn btn-default btn-xs", role: "button"}, 
+                                React.createElement("span", {className: "glyphicon glyphicon-map-marker", "aria-hidden": "true"}), " Show"
+                            )
                         );
                     }
                 })
@@ -777,7 +779,10 @@ var defaultPatterns = {
 };
 
 function setSelfHref(obj, uri) {
-    extend(obj, {"_links":{"self":{"href": uri}}});
+    if (!obj.hasOwnProperty('_links')) {
+        obj['_links'] = {"self": null};
+    }
+    obj['_links']['self'] = {"href": uri};
 }
 
 function getSelfHref(obj) {
@@ -796,8 +801,6 @@ function Api(config) {
     this._messageLog         = [];
     this._debugMode          = false;
     this._interval           = 15;
-
-    this._initPatterns(defaultPatterns);
 
     if (config) {
         if (true === config.debugMode) {
@@ -820,6 +823,7 @@ function Api(config) {
         }
     }
 
+    this._initPatterns(defaultPatterns);
 }
 
 Api.prototype.pushToLog = function(orig) {
@@ -856,7 +860,7 @@ Api.prototype._route = function(request, store) {
             if (response.status === ApiResponse.TYPE_ERROR) {
                 if (true == this._debugMode) {
                     console.log(response);
-                    console.log('Conflict: ' + response._error + ' (' + response.resource + ')');
+                    console.log(response._error + ' (' + response.resource + ')');
                 }
                 response.request = request;
                 return response;
@@ -973,10 +977,9 @@ StorageProxy.prototype.updateCollectionWith = function(key, update) {
             "_links": {
                 "self": {"href": key}
             },
-            "_embedded": {},
             "count": 0
         };
-        collection['_embedded'][key] = [];
+        collection['_links'][key] = [];
     }
     update(collection);
     this._data[key] = collection;
@@ -1018,14 +1021,14 @@ StorageProxy.prototype.hasItem = function(key) {
     return this._data.hasOwnProperty(key);
 };
 
-StorageProxy.prototype.addToCollection = function(key, value) {
+StorageProxy.prototype.addToCollection = function(key, value, item) {
     var addToCollection = this._storage.addToCollection.bind(this); 
-    return addToCollection(key, value);
+    return addToCollection(key, value, item);
 };
 
-StorageProxy.prototype.removeFromCollection = function(key, value) {
+StorageProxy.prototype.removeFromCollection = function(key, value, item) {
     var removeFromCollection = this._storage.removeFromCollection.bind(this);
-    return removeFromCollection(key, value);
+    return removeFromCollection(key, value, item);
 };
 
 StorageProxy.prototype.firstAvailableKey = function(resource) {
@@ -1033,6 +1036,10 @@ StorageProxy.prototype.firstAvailableKey = function(resource) {
     while (this.hasItem(resource + '/' + i))
         i++;
     return resource + '/' + i;
+};
+
+StorageProxy.prototype.getSelfHref = function(obj) {
+    return this._storage.getSelfHref(obj);
 };
 
 Api.prototype.batchRun = function(batch, onComplete, onProgress) {
@@ -1131,10 +1138,9 @@ BrowserStorage.prototype.updateCollectionWith = function(key, update) {
             "_links": {
                 "self": {"href": key}
             },
-            "_embedded": {},
             "count": 0
         };
-    collection['_embedded'][key] = [];
+    collection['_links'][key] = [];
     if (cached) 
         collection = parseWithDefault(cached, collection);
     update(collection);
@@ -1180,31 +1186,43 @@ BrowserStorage.prototype.hasItem = function(key) {
     return (null !== localStorage.getItem(this.namespaced(key)));
 };
 
-BrowserStorage.prototype.addToCollection = function(key, value) {
+BrowserStorage.prototype.addToCollection = function(key, value, item) {
     this.updateCollectionWith(key, function(collection) {
-        var items = collection['_embedded'][key];
+        if (!item)
+            item = key;
+        if (!collection.hasOwnProperty('_links')) {
+            collection['_links'] = {};
+        }
+        if (!collection['_links'].hasOwnProperty(item)) {
+            collection['_links'][item] = [];
+        }
+        var items = collection['_links'][item];
         for (var i = 0; i < items.length; i++) {
-            if (items[i]['_links']['self']['href'] === value) 
+            if (items[i].href === value) 
                 return;
         }
-        items.push({
-            "_links": {
-                "self": {"href": value}
-            }
-        });
-        collection['_embedded'][key] = items;
-        collection.count++;
+        items.push({"href": value});
+        collection['_links'][item] = items;
+        if (collection.hasOwnProperty('count'))
+            collection.count++;
     });
 };
 
-BrowserStorage.prototype.removeFromCollection = function(key, value) {
+BrowserStorage.prototype.removeFromCollection = function(key, value, item) {
     this.updateCollectionWith(key, function(collection) {
-        var items = collection['_embedded'][key];
+        if (!item)
+            item = key;
+        if (!collection.hasOwnProperty('_links')) 
+            return;
+        var items = collection['_links'][item];
+        if (!items)
+            return;
         for (var i = 0; i < items.length; i++) {
-            if (items[i]['_links']['self']['href'] === value) {
+            if (items[i].href === value) {
                 items.splice(i, 1);
-                collection['_embedded'][key] = items;
-                collection.count--;
+                collection['_links'][item] = items;
+                if (collection.hasOwnProperty('count'))
+                    collection.count--;
                 return;
             }
         }
@@ -1216,6 +1234,10 @@ BrowserStorage.prototype.firstAvailableKey = function(resource) {
     while (this.hasItem(resource + '/' + i))
         i++;
     return resource + '/' + i;
+};
+
+BrowserStorage.prototype.getSelfHref = function(obj) {
+    return getSelfHref(obj);
 };
 
 BrowserStorage.prototype.keys = function() {
@@ -1382,11 +1404,63 @@ var store = new GroundFork.BrowserStorage({
     namespace: "sphere.admin"
 });
 
+function embed(collection) {
+    var links = collection['_links']['contacts']
+        contacts = [];
+    for (var i = 0; i < links.length; i++) {
+        var item = this.getItem(links[i].href);
+        if (item)
+            contacts.push(item);
+    }
+    if (!collection.hasOwnProperty('_embedded')) 
+        collection['_embedded'] = {};
+    collection['_embedded']['contacts'] = contacts;
+}
+
 var api = new GroundFork.Api({
     storage: store,
     debugMode: false,
     onBatchJobStart: function() {},
-    onBatchJobComplete: function() {}
+    onBatchJobComplete: function() {},
+    patterns: {
+        "POST/contacts": function(context, request) {
+            var payload = request.payload,
+                uri = this.getSelfHref(payload);
+            this.insertItem(uri, payload, false);
+            var customer = request.payload['_links'].customer.href;
+            this.addToCollection(customer, uri, 'contacts');
+
+            // Embed contacts in local customer object
+            this.updateCollectionWith(customer, embed.bind(this));
+
+            return {
+                "status" : 'success',
+                "data"   : payload
+            };
+        },
+        "DELETE/contacts/:id": function(context) {
+            var item = this.getItem('contacts/' + context.id);
+            if (!item) {
+                return { 
+                    "status"   : 'error',
+                    "_error"   : "MISSING_KEY", 
+                    "resource" : 'contacts/' + context.id
+                };
+            }
+            var customer = item['_links'].customer.href;
+            this.removeItem('contacts/' + context.id);
+            this.removeFromCollection(customer, 'contacts/' + context.id, 'contacts');
+
+            // Update embedded contacts
+            this.updateCollectionWith(customer, embed.bind(this));
+
+            return {
+                "status"   : 'success',
+                "resource" : 'contacts/' + context.id,
+                "data"     : item
+            };
+        }
+    }
 });
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
@@ -43709,14 +43783,13 @@ var DataStore = assign({}, EventEmitter.prototype, {
     fetchCollection: function(collection) {
         var data = [];
         var items = this.store.getItem(collection);
-        if (items && items.hasOwnProperty('_embedded') && items['_embedded'].hasOwnProperty(collection)) {
-            var collection = items['_embedded'][collection];
+        if (items && items.hasOwnProperty('_links') && items['_links'].hasOwnProperty(collection)) {
+            var collection = items['_links'][collection];
             for (var key in collection) {
                 var item = collection[key],
-                    href = item['_links']['self'].href, 
+                    href = item.href, 
                     obj = null;
-                if (href) {
-                    obj = this.store.getItem(href);
+                if (href && (obj = this.store.getItem(href))) {
                     obj.key = href.split('/')[1];
                     data.push(obj);
                 }

@@ -56,7 +56,9 @@ var CustomersListView = React.createClass({
                             );
                         }
                         return (
-                            <span><a href={'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'}>Show</a></span>
+                            <a href={'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'} className="btn btn-default btn-xs" role="button">
+                                <span className="glyphicon glyphicon-map-marker" aria-hidden="true"></span> Show
+                            </a>
                         );
                     }
                 })

@@ -107,7 +107,6 @@ var AddressInput = React.createClass({
                 hasFeedback
                 ref="input"
                 onChange={this.handleChange} />
-
         );
     }
 });

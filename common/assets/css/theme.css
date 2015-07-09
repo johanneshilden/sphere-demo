@@ -29,9 +29,12 @@ table.type-ahead td {
     cursor: pointer;
 }
 
-nav.navbar,
-.panel-heading {
+nav.navbar {
     background: top left url('../images/streambk.png');
+}
+
+.panel-default > .panel-heading {
+    background-color: #2c2c2c;
 }
 
 .panel-default > .panel-heading {

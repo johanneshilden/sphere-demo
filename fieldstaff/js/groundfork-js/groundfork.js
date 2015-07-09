@@ -110,8 +110,6 @@ function Api(config) {
     this._debugMode          = false;
     this._interval           = 15;
 
-    this._initPatterns(defaultPatterns);
-
     if (config) {
         if (true === config.debugMode) {
             this._debugMode = true;
@@ -133,6 +131,7 @@ function Api(config) {
         }
     }
 
+    this._initPatterns(defaultPatterns);
 }
 
 Api.prototype.pushToLog = function(orig) {
@@ -169,7 +168,7 @@ Api.prototype._route = function(request, store) {
             if (response.status === ApiResponse.TYPE_ERROR) {
                 if (true == this._debugMode) {
                     console.log(response);
-                    console.log('Conflict: ' + response._error + ' (' + response.resource + ')');
+                    console.log(response._error + ' (' + response.resource + ')');
                 }
                 response.request = request;
                 return response;
@@ -286,10 +285,9 @@ StorageProxy.prototype.updateCollectionWith = function(key, update) {
             "_links": {
                 "self": {"href": key}
             },
-            "_embedded": {},
             "count": 0
         };
-        collection['_embedded'][key] = [];
+        collection['_links'][key] = [];
     }
     update(collection);
     this._data[key] = collection;
@@ -331,14 +329,14 @@ StorageProxy.prototype.hasItem = function(key) {
     return this._data.hasOwnProperty(key);
 };
 
-StorageProxy.prototype.addToCollection = function(key, value) {
+StorageProxy.prototype.addToCollection = function(key, value, item) {
     var addToCollection = this._storage.addToCollection.bind(this); 
-    return addToCollection(key, value);
+    return addToCollection(key, value, item);
 };
 
-StorageProxy.prototype.removeFromCollection = function(key, value) {
+StorageProxy.prototype.removeFromCollection = function(key, value, item) {
     var removeFromCollection = this._storage.removeFromCollection.bind(this);
-    return removeFromCollection(key, value);
+    return removeFromCollection(key, value, item);
 };
 
 StorageProxy.prototype.firstAvailableKey = function(resource) {
@@ -346,6 +344,10 @@ StorageProxy.prototype.firstAvailableKey = function(resource) {
     while (this.hasItem(resource + '/' + i))
         i++;
     return resource + '/' + i;
+};
+
+StorageProxy.prototype.getSelfHref = function(obj) {
+    return this._storage.getSelfHref(obj);
 };
 
 Api.prototype.batchRun = function(batch, onComplete, onProgress) {
@@ -444,10 +446,9 @@ BrowserStorage.prototype.updateCollectionWith = function(key, update) {
             "_links": {
                 "self": {"href": key}
             },
-            "_embedded": {},
             "count": 0
         };
-    collection['_embedded'][key] = [];
+    collection['_links'][key] = [];
     if (cached) 
         collection = parseWithDefault(cached, collection);
     update(collection);
@@ -493,31 +494,43 @@ BrowserStorage.prototype.hasItem = function(key) {
     return (null !== localStorage.getItem(this.namespaced(key)));
 };
 
-BrowserStorage.prototype.addToCollection = function(key, value) {
+BrowserStorage.prototype.addToCollection = function(key, value, item) {
     this.updateCollectionWith(key, function(collection) {
-        var items = collection['_embedded'][key];
+        if (!item)
+            item = key;
+        if (!collection.hasOwnProperty('_links')) {
+            collection['_links'] = {};
+        }
+        if (!collection['_links'].hasOwnProperty(item)) {
+            collection['_links'][item] = [];
+        }
+        var items = collection['_links'][item];
         for (var i = 0; i < items.length; i++) {
-            if (items[i]['_links']['self']['href'] === value) 
+            if (items[i].href === value) 
                 return;
         }
-        items.push({
-            "_links": {
-                "self": {"href": value}
-            }
-        });
-        collection['_embedded'][key] = items;
-        collection.count++;
+        items.push({"href": value});
+        collection['_links'][item] = items;
+        if (collection.hasOwnProperty('count'))
+            collection.count++;
     });
 };
 
-BrowserStorage.prototype.removeFromCollection = function(key, value) {
+BrowserStorage.prototype.removeFromCollection = function(key, value, item) {
     this.updateCollectionWith(key, function(collection) {
-        var items = collection['_embedded'][key];
+        if (!item)
+            item = key;
+        if (!collection.hasOwnProperty('_links')) 
+            return;
+        var items = collection['_links'][item];
+        if (!items)
+            return;
         for (var i = 0; i < items.length; i++) {
-            if (items[i]['_links']['self']['href'] === value) {
+            if (items[i].href === value) {
                 items.splice(i, 1);
-                collection['_embedded'][key] = items;
-                collection.count--;
+                collection['_links'][item] = items;
+                if (collection.hasOwnProperty('count'))
+                    collection.count--;
                 return;
             }
         }
@@ -529,6 +542,10 @@ BrowserStorage.prototype.firstAvailableKey = function(resource) {
     while (this.hasItem(resource + '/' + i))
         i++;
     return resource + '/' + i;
+};
+
+BrowserStorage.prototype.getSelfHref = function(obj) {
+    return getSelfHref(obj);
 };
 
 BrowserStorage.prototype.keys = function() {
