@@ -6,14 +6,11 @@ var AppDispatcher = assign(new Dispatcher, {});
 
 AppDispatcher.register(function(payload) {
     switch (payload.actionType) {
+        case 'command-invoke':
+            DataStore.invokeCommand(payload.command);
+            break;
         case 'alert':
             DataStore.emit('alert', payload.message);
-            break;
-        case 'toggle-customer-active':
-            DataStore.patchCustomer(payload.patch);
-            break;
-        case 'update-customer':
-            DataStore.updateCustomer(payload.update);
             break;
         default:
     }

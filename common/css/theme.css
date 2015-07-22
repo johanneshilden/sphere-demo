@@ -1,0 +1,259 @@
+/* 
+ *
+ * rgb(250, 255, 189);
+ */
+
+#main {
+    min-height: 400px;
+}
+
+body {
+    background: top left url('../images/body.jpg');
+    color: #3e3e3e;
+}
+
+h3 {
+    margin-bottom: .7em;
+}
+
+#page-wrapper {
+    background: none;
+}
+
+.table th span {
+    cursor: pointer;
+}
+
+a,
+a:hover,
+a:visited,
+a:active,
+table a:not(.btn), 
+.table a:not(.btn) {
+    text-decoration: none;
+    color: #21c2f8;
+}
+
+/* Breadcrumbs */
+
+ol.breadcrumb {
+    background: #fff;
+}
+
+.panel ol.breadcrumb {
+    border: 1px solid #ecf0f1;
+}
+
+/* Buttons */
+
+.btn .glyphicon,
+.dropdown-menu .glyphicon,
+.dropdown-menu .fa {
+    margin-right: .4em;
+}
+
+.btn,
+.btn:hover,
+.btn:active,
+.btn:visited,
+.btn:link {
+    border-color: transparent !important;
+}
+
+/* Nav */
+
+.navbar-inverse .navbar-nav > li > a i.fa {
+    margin-right: .5em;
+}
+
+/*
+.navbar-inverse {
+    background-color: #222;
+}
+*/
+
+.navbar-inverse,
+.side-nav {
+    background: top left url('../images/texture.png');
+}
+
+.navbar-inverse .navbar-nav > li > a {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    color: #e8e8e8;
+}
+
+.navbar-inverse .navbar-nav > li > a,
+.navbar-nav > li > span.nav-label {
+    /*
+    border-bottom: 1px dotted #5e5e5e;
+    */
+}
+
+.navbar-inverse .navbar-nav > li > a:visited,
+.navbar-inverse .navbar-nav > li > a:active,
+.navbar-inverse .navbar-nav > li > a:link {
+    background-color: transparent !important;
+    color: #e8e8e8 !important;
+}
+
+.navbar-inverse .navbar-nav > li > a:hover {
+    background: #2c2c2c !important;
+    color: #fff;
+}
+
+@media (min-width: 769px) {
+    .navbar {
+        width: 225px;
+    }
+}
+
+.btn-sync {
+    position: absolute;
+    z-index: 2; 
+    right: 12px; 
+    top: 11px;
+    border: 0;
+    background-color: #2a2a2a;
+}
+
+.btn-sync:hover {
+    background-color: #111;
+}
+
+.btn-default.btn-sync:focus {
+    border: none !important !important;
+}
+
+.navbar-nav > li > span.nav-label {
+    padding-bottom: 12px;
+    padding-left: 15px;
+    padding-top: 22px;
+    text-decoration: none;
+    width: 225px;
+    display: block;
+    float: left;
+    color: #9a9a9a;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    ul.navbar-nav {
+        margin-top: 0;
+        margin-bottom: 0;
+    }
+
+    .btn-sync {
+        margin-right: 5em;
+    }
+}
+
+.navbar-inverse .navbar-nav > li > a, .navbar-nav > li > span.nav-label {
+    clear: both;
+}
+
+/* Griddle */
+
+.griddle .griddle-filter {
+    margin-bottom: 1em;
+}
+
+.griddle-footer {
+    text-align: center;
+}
+
+/* Progress bar */
+
+.progress-bar {
+    transition: none !important;
+    background-color: #2c2c2c;
+}
+
+/* Panels */
+
+.panel-primary > .panel-heading {
+    background: #3a3a3a;
+    background: top left url('../images/texture.png');
+    font-weight: bold;
+    padding-left: 1.1em;
+}
+
+.panel-primary > .panel-heading,
+.panel-primary {
+    border-color: #dce4ec;
+    /* border: none; */
+}
+
+.panel-fill .panel,
+.panel-fill .tab-content {
+    border: none;
+    margin-bottom: 0;
+    -webkit-box-shadow: none;
+    box-shadow: none;
+}
+
+.panel-fill .nav-tabs > li > a {
+    border-radius: 0;
+    margin-right: 0;
+}
+
+/* Tabs */
+
+.panel .nav > li > a:hover {
+    background-color: #fafafa;
+    border-color: #fafafa;
+    border-bottom: 1px solid #ecf0f1;
+}
+
+.panel .nav > li.active > a {
+    background-color: #fff;
+    border-color: #ecf0f1;
+    border-bottom: 1px solid #fff;
+    border-top: 1px solid #fff;
+}
+
+.panel .nav > li:first-child.active > a {
+    border-left: none;
+}
+
+/* Paginator */
+
+ul.pagination {
+    border: 2px solid rgb(220, 228, 236);
+}
+
+.pagination > li > a, 
+.pagination > li > a:hover, 
+.pagination > li > a:active,
+.pagination > li > a:disabled {
+    background: none !important;
+    text-decoration: none !important;
+    border-color: #ecf0f1 !important;
+    border-style: solid !important;
+    border-width: 0 1px !important;
+    color: rgb(62, 62, 62) !important;
+}
+
+.pagination > .active a {
+}
+
+/* Tables */
+
+.table-select > tbody > tr.standard-row:hover > td {
+    background: #f8f8f8;
+    cursor: pointer;
+}
+
+.table-bordered > thead > tr > th {
+    /*
+    background-color: #e8e8e8;
+    */
+}
+
+table.type-ahead td {
+    cursor: pointer;
+}
+
+.griddle-body table tr.unresolved {
+    background-color: rgba(252, 230, 3, 0.2);
+}

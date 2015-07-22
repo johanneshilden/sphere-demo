@@ -35,8 +35,8 @@ var CustomersListView = React.createClass({
     },
     render: function() {
         var columns = this.state.collapsed
-            ? ["name", "tin", "area", "priceCategory", "position"]
-            : ["name", "address", "tin", "phone", "area", "priceCategory", "position"];
+            ? ["name", "tin", "area", "priceCategory", "position", "active", "edit"]
+            : ["name", "address", "tin", "phone", "area", "priceCategory", "position", "active", "edit"];
         var metadata = [
             {"columnName": "name", "displayName": "Name"}, 
             {"columnName": "address", "displayName": "Address"}, 
@@ -80,14 +80,16 @@ var CustomersListView = React.createClass({
                 "customComponent": React.createClass({
                     render: function() {
                         return (
-                            <a href={'#customers/edit/' + this.props.rowData.key}>Edit</a>
+                            <a href={'#customers/edit/' + this.props.rowData.key} className="btn btn-default btn-xs" role="button">
+                                <span className="glyphicon glyphicon-pencil" aria-hidden="true"></span> Edit
+                            </a>
                         );
                     }
                 })
             }
         ];
         return (
-            <Panel>
+            <Panel header="Customers">
                 <Griddle 
                     results={this.state.data} 
                     tableClassName="table table-bordered" 

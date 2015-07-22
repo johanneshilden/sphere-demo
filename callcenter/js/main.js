@@ -23,63 +23,11 @@ var store = new GroundFork.BrowserStorage({
     namespace: "sphere.callcenter"
 });
 
-function embed(collection) {
-    var links = collection['_links']['contacts']
-        contacts = [];
-    for (var i = 0; i < links.length; i++) {
-        var item = this.getItem(links[i].href);
-        if (item)
-            contacts.push(item);
-    }
-    if (!collection.hasOwnProperty('_embedded')) 
-        collection['_embedded'] = {};
-    collection['_embedded']['contacts'] = contacts;
-}
-
 var api = new GroundFork.Api({
     storage: store,
     debugMode: true,
     onBatchJobStart: function() {},
-    onBatchJobComplete: function() {},
-    patterns: {
-        "POST/contacts": function(context, request) {
-            var payload = request.payload,
-                uri = this.getSelfHref(payload);
-            this.insertItem(uri, payload, false);
-            var customer = request.payload['_links'].customer.href;
-            this.addToCollection(customer, uri, 'contacts');
-
-            // Embed contacts in local customer object
-            this.updateCollectionWith(customer, embed.bind(this));
-
-            return {
-                "status" : 'success',
-                "data"   : payload
-            };
-        },
-        "DELETE/contacts/:id": function(context) {
-            var item = this.getItem('contacts/' + context.id);
-            if (!item) {
-                return { 
-                    "status"   : 'error',
-                    "_error"   : "MISSING_KEY", 
-                    "resource" : 'contacts/' + context.id
-                };
-            }
-            var customer = item['_links'].customer.href;
-            this.removeItem('contacts/' + context.id);
-            this.removeFromCollection(customer, 'contacts/' + context.id, 'contacts');
-            
-            // Update embedded contacts
-            this.updateCollectionWith(customer, embed.bind(this));
-
-            return {
-                "status"   : 'success',
-                "resource" : 'contacts/' + context.id,
-                "data"     : item
-            };
-        }
-    }
+    onBatchJobComplete: function() {}
 });
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
@@ -248,7 +196,7 @@ var NavComponent = React.createClass({
         }
         return (
             <div>
-                <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
+                <Navbar className="navbar-fixed-top" brand={<a href="#"><img src="../common/assets/images/sphere-logo.png" style={{marginTop: '-2px'}} alt="" /></a>} toggleNavKey={0}>
                     <Nav eventKey={0}>
                         {items}
                     </Nav>
@@ -332,3 +280,5 @@ websocket.onmessage = function(e) {
 websocket.onerror = function(e) { 
     console.log('error');
 };
+
+

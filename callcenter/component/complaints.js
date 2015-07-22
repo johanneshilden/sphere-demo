@@ -56,8 +56,12 @@ var ComplaintsEntityView = React.createClass({
     },
     resolve: function(complaintId) {
         AppDispatcher.dispatch({
-            actionType  : 'complaint-resolve',
-            complaintId : complaintId
+            actionType   : 'command-invoke',
+            command      : {
+                method   : 'PATCH',
+                resource : complaintId,
+                payload  : {resolved: Date.now()}
+            }
         });
     },
     componentDidMount: function() {

@@ -248,7 +248,7 @@ var NavComponent = React.createClass({
         }
         return (
             <div>
-                <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
+                <Navbar className="navbar-fixed-top" brand={<a href="#"><img src="../common/assets/images/sphere-logo.png" style={{marginTop: '-2px'}} alt="" /></a>} toggleNavKey={0}>
                     <Nav eventKey={0}>
                         {items}
                     </Nav>

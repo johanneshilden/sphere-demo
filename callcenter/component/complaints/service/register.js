@@ -60,15 +60,20 @@ var DescriptionInput = React.createClass({
 var ServiceComplaintRegistrationForm = React.createClass({
     handleSubmit: function() {
         if (this.isValid()) {
+            var complaint = {
+                "created"     : this.refs.dateTimeInput.props.dateTime,
+                "description" : this.refs.descriptionInput.state.value,
+                "type"        : 'service',
+                "_links"      : {
+                    "customer": this.props.customer['_links']['self']
+                }
+            };
             AppDispatcher.dispatch({
-                actionType: 'create-complaint',
-                complaint: {
-                    "created"     : this.refs.dateTimeInput.props.dateTime,
-                    "description" : this.refs.descriptionInput.state.value,
-                    "type"        : 'service',
-                    "_links"      : {
-                        "customer": this.props.customer['_links']['self']
-                    }
+                actionType   : 'command-invoke',
+                command      : {
+                    method   : 'POST',
+                    resource : 'complaints',
+                    payload  : complaint
                 }
             });
             window.location.hash = 'complaints';

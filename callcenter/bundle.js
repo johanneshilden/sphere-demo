@@ -57,8 +57,12 @@ var ComplaintsEntityView = React.createClass({displayName: "ComplaintsEntityView
     },
     resolve: function(complaintId) {
         AppDispatcher.dispatch({
-            actionType  : 'complaint-resolve',
-            complaintId : complaintId
+            actionType   : 'command-invoke',
+            command      : {
+                method   : 'PATCH',
+                resource : complaintId,
+                payload  : {resolved: Date.now()}
+            }
         });
     },
     componentDidMount: function() {
@@ -707,8 +711,12 @@ var QualityComplaintRegistrationForm = React.createClass({displayName: "QualityC
             "_embedded" : {"items": items}
         };
         AppDispatcher.dispatch({
-            actionType : 'create-complaint',
-            complaint  : complaint
+            actionType   : 'command-invoke',
+            command      : {
+                method   : 'POST',
+                resource : 'complaints',
+                payload  : complaint
+            }
         });
         this.refs.form.collapse();
         this.setState(this.getInitialState());
@@ -878,15 +886,20 @@ var DescriptionInput = React.createClass({displayName: "DescriptionInput",
 var ServiceComplaintRegistrationForm = React.createClass({displayName: "ServiceComplaintRegistrationForm",
     handleSubmit: function() {
         if (this.isValid()) {
+            var complaint = {
+                "created"     : this.refs.dateTimeInput.props.dateTime,
+                "description" : this.refs.descriptionInput.state.value,
+                "type"        : 'service',
+                "_links"      : {
+                    "customer": this.props.customer['_links']['self']
+                }
+            };
             AppDispatcher.dispatch({
-                actionType: 'create-complaint',
-                complaint: {
-                    "created"     : this.refs.dateTimeInput.props.dateTime,
-                    "description" : this.refs.descriptionInput.state.value,
-                    "type"        : 'service',
-                    "_links"      : {
-                        "customer": this.props.customer['_links']['self']
-                    }
+                actionType   : 'command-invoke',
+                command      : {
+                    method   : 'POST',
+                    resource : 'complaints',
+                    payload  : complaint
                 }
             });
             window.location.hash = 'complaints';
@@ -941,14 +954,16 @@ var CustomersView = React.createClass({displayName: "CustomersView",
     handleSelect: function(key) {
         this.setState({key: key});
     },
-    onNewRegistration: function() {
-        this.setState({key: 3});
+    onStoreChange: function(command) {
+        if (command && 'POST' === command.method && 'registrations' === command.resource) {
+            this.setState({key: 3});
+        }
     },
     componentDidMount: function() {
-        DataStore.on('new-registration', this.onNewRegistration);
+        DataStore.on('change', this.onStoreChange);
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('new-registration', this.onNewRegistration);
+        DataStore.removeListener('change', this.onStoreChange);
     },
     render: function() {
         return (
@@ -1434,14 +1449,19 @@ var PriceCategorySelect = React.createClass({displayName: "PriceCategorySelect",
 var CustomerRegistrationForm = React.createClass({displayName: "CustomerRegistrationForm",
     handleSubmit: function() {
         if (this.isValid()) {
+            var customer = {
+                name          : this.refs.customerName.state.value,
+                address       : this.refs.customerAddress.state.value,
+                phone         : this.refs.customerPhone.state.value,
+                area          : this.refs.customerArea.state.value,
+                priceCategory : this.refs.customerPriceCategory.state.value
+            };
             AppDispatcher.dispatch({
-                actionType: 'customer-registration',
-                customer: {
-                    name          : this.refs.customerName.state.value,
-                    address       : this.refs.customerAddress.state.value,
-                    phone         : this.refs.customerPhone.state.value,
-                    area          : this.refs.customerArea.state.value,
-                    priceCategory : this.refs.customerPriceCategory.state.value
+                actionType   : 'command-invoke',
+                command      : {
+                    method   : 'POST',
+                    resource : 'registrations',
+                    payload  : customer
                 }
             });
             this.resetForm();
@@ -1594,24 +1614,27 @@ var AppDispatcher = assign(new Dispatcher, {});
 
 AppDispatcher.register(function(payload) {
     switch (payload.actionType) {
-        case 'customer-registration':
-            DataStore.registerCustomer(payload.customer);
+//        case 'customer-registration':
+//            DataStore.registerCustomer(payload.customer);
+//            break;
+//        case 'create-complaint':
+//            DataStore.createComplaint(payload.complaint);
+//            break;
+//        case 'complaint-resolve':
+//            DataStore.resolveComplaint(payload.complaintId);
+//            break;
+//        case 'create-contact':
+//            DataStore.createContact(payload.contact);
+//            break;
+//        case 'delete-contact':
+//            DataStore.deleteContact(payload.contact);
+//            break;
+        case 'command-invoke':
+            DataStore.invokeCommand(payload.command);
             break;
-        case 'create-complaint':
-            DataStore.createComplaint(payload.complaint);
-            break;
-        case 'complaint-resolve':
-            DataStore.resolveComplaint(payload.complaintId);
-            break;
-        case 'create-contact':
-            DataStore.createContact(payload.contact);
-            break;
-        case 'delete-contact':
-            DataStore.deleteContact(payload.contact);
-            break;
-        case 'alert':
-            DataStore.emit('alert', payload.message);
-            break;
+//        case 'alert':
+//            DataStore.emit('alert', payload.message);
+//            break;
         default:
     }
     return true;
@@ -1639,12 +1662,33 @@ var ApiResponse = {
     TYPE_ERROR: 'error'
 };
 
+function embed(resource, collection) {
+    var links = collection['_links'][resource],
+        items = [];
+    for (var i = 0; i < links.length; i++) {
+        var item = this.getItem(links[i].href);
+        if (item) {
+            delete item['_embedded'];
+            items.push(item);
+        }
+    }
+    if (!collection.hasOwnProperty('_embedded')) 
+        collection['_embedded'] = {};
+    collection['_embedded'][resource] = items;
+}
+
 var defaultPatterns = {
     "POST/:resource": function(context, request) {
         var payload = request.payload,
-            uri = getSelfHref(payload);
+            uri = getSelfHref(payload),
+            linked = null;
         this.insertItem(uri, payload, true);
-        this.addToCollection(context.resource, uri);
+        if ((linked = getLink(payload, 'collection'))) {
+            this.addToCollection(linked, uri, context.resource);
+            this.updateCollectionWith(linked, embed.bind(this, context.resource));
+        } else {
+            this.addToCollection(context.resource, uri);
+        }
         return {
             "status" : ApiResponse.TYPE_SUCCESS,
             "data"   : payload
@@ -1653,7 +1697,8 @@ var defaultPatterns = {
     "DELETE/:resource/:id": function(context) {
         var resource = context.resource,
             key = resource + '/' + context.id,
-            item = this.getItem(key);
+            item = this.getItem(key),
+            linked = null;
         if (!item) {
             return { 
                 "status"   : ApiResponse.TYPE_ERROR,
@@ -1662,7 +1707,12 @@ var defaultPatterns = {
             };
         }
         this.removeItem(key);
-        this.removeFromCollection(resource, key);
+        if ((linked = getLink(item, 'collection'))) {
+            this.removeFromCollection(linked, key, context.resource);
+            this.updateCollectionWith(linked, embed.bind(this, context.resource));
+        } else {
+          this.removeFromCollection(resource, key);
+        }
         return {
             "status"   : ApiResponse.TYPE_SUCCESS,
             "resource" : resource,
@@ -1715,10 +1765,14 @@ function setSelfHref(obj, uri) {
     obj['_links']['self'] = {"href": uri};
 }
 
-function getSelfHref(obj) {
-    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty('self'))
+function getLink(obj, resource) {
+    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty(resource))
         return null;
-    return obj['_links']['self'].href;
+    return obj['_links'][resource].href;
+}
+
+function getSelfHref(obj) {
+    return getLink(obj, 'self');
 }
 
 function Api(config) {
@@ -1918,7 +1972,7 @@ StorageProxy.prototype.updateCollectionWith = function(key, update) {
 StorageProxy.prototype.expandLinks = function(item) {
     if ('object' === typeof item && item.hasOwnProperty('_links')) {
         for (var key in item['_links']) {
-            if ('self' == key || !item['_links'][key].href)
+            if ('self' === key || 'collection' === key || !item['_links'][key].href)
                 continue;
             var ref = item['_links'][key].href;
             if (this._data.hasOwnProperty(ref)) {
@@ -2080,7 +2134,7 @@ BrowserStorage.prototype.updateCollectionWith = function(key, update) {
 BrowserStorage.prototype.expandLinks = function(item) {
     if ('object' === typeof item && item.hasOwnProperty('_links')) {
         for (var key in item['_links']) {
-            if ('self' == key || !item['_links'][key].href)
+            if ('self' === key || 'collection' === key || !item['_links'][key].href)
                 continue;
             var cached = localStorage.getItem(this.namespaced(item['_links'][key].href)),
                 data = parseWithDefault(cached, null);
@@ -2196,6 +2250,20 @@ function decorate(obj, items) {
     }
 }
 
+function defaultRequestHandler(data, onSuccess, onError) {
+    $.support.cors = true;
+    $.ajax({
+        url: this._url + '/' + this._syncSuffix,
+        type: 'POST',
+        headers: {
+            "Authorization": "Basic " + btoa(this._clientKey + ':' + this._clientSecret)
+        },
+        data: JSON.stringify(data),
+        error: onError,
+        success: onSuccess
+    });
+}
+
 function BasicHttpEndpoint(config) {
 
     if (!config) {
@@ -2232,6 +2300,11 @@ function BasicHttpEndpoint(config) {
     if ('string' === typeof config.url) {
         this._url = config.url.replace(/\/$/, '');
     }
+    if ('function' === typeof config.requestHandler) {
+        this._requestHandler = config.requestHandler;
+    } else {
+        this._requestHandler = defaultRequestHandler;
+    }
 
 }
 
@@ -2263,23 +2336,9 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
     if (this._onRequestStart) {
         this._onRequestStart(); 
     }
-    $.support.cors = true;
-    $.ajax({
-        url: this._url + '/' + this._syncSuffix,
-        type: 'POST',
-        headers: {
-            "Authorization": "Basic " + btoa(this._clientKey + ':' + this._clientSecret)
-        },
-        data: JSON.stringify(data),
-        error: function(e) {
-            if ('function' === typeof onError) {
-                onError(e);
-            }
-            if (this._onRequestComplete) {
-                this._onRequestComplete(); 
-            }
-        }.bind(this),
-        success: function(resp) {
+    var requestHandler = this._requestHandler.bind(this);
+    requestHandler(data, 
+        function(resp) {
             if (this._onRequestComplete) {
                 this._onRequestComplete(); 
             }
@@ -2296,8 +2355,16 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
                 }
             }, onProgress);
             this._device.setSyncPoint(resp.syncPoint);
+        }.bind(this), 
+        function(e) {
+            if ('function' === typeof onError) {
+                onError(e);
+            }
+            if (this._onRequestComplete) {
+                this._onRequestComplete(); 
+            }
         }.bind(this)
-    });
+    );
     return true;
 }
 
@@ -2334,63 +2401,11 @@ var store = new GroundFork.BrowserStorage({
     namespace: "sphere.callcenter"
 });
 
-function embed(collection) {
-    var links = collection['_links']['contacts']
-        contacts = [];
-    for (var i = 0; i < links.length; i++) {
-        var item = this.getItem(links[i].href);
-        if (item)
-            contacts.push(item);
-    }
-    if (!collection.hasOwnProperty('_embedded')) 
-        collection['_embedded'] = {};
-    collection['_embedded']['contacts'] = contacts;
-}
-
 var api = new GroundFork.Api({
     storage: store,
     debugMode: true,
     onBatchJobStart: function() {},
-    onBatchJobComplete: function() {},
-    patterns: {
-        "POST/contacts": function(context, request) {
-            var payload = request.payload,
-                uri = this.getSelfHref(payload);
-            this.insertItem(uri, payload, false);
-            var customer = request.payload['_links'].customer.href;
-            this.addToCollection(customer, uri, 'contacts');
-
-            // Embed contacts in local customer object
-            this.updateCollectionWith(customer, embed.bind(this));
-
-            return {
-                "status" : 'success',
-                "data"   : payload
-            };
-        },
-        "DELETE/contacts/:id": function(context) {
-            var item = this.getItem('contacts/' + context.id);
-            if (!item) {
-                return { 
-                    "status"   : 'error',
-                    "_error"   : "MISSING_KEY", 
-                    "resource" : 'contacts/' + context.id
-                };
-            }
-            var customer = item['_links'].customer.href;
-            this.removeItem('contacts/' + context.id);
-            this.removeFromCollection(customer, 'contacts/' + context.id, 'contacts');
-            
-            // Update embedded contacts
-            this.updateCollectionWith(customer, embed.bind(this));
-
-            return {
-                "status"   : 'success',
-                "resource" : 'contacts/' + context.id,
-                "data"     : item
-            };
-        }
-    }
+    onBatchJobComplete: function() {}
 });
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
@@ -2559,7 +2574,7 @@ var NavComponent = React.createClass({displayName: "NavComponent",
         }
         return (
             React.createElement("div", null, 
-                React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, "Sphere"), toggleNavKey: 0}, 
+                React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, React.createElement("img", {src: "../common/assets/images/sphere-logo.png", style: {marginTop: '-2px'}, alt: ""})), toggleNavKey: 0}, 
                     React.createElement(Nav, {eventKey: 0}, 
                         items
                     )
@@ -57952,6 +57967,16 @@ var DataStore = assign({}, EventEmitter.prototype, {
         return data;
     },
 
+    invokeCommand: function(command) {
+        if ('POST' === command.method) {
+            command.payload._local = true;
+        }
+        var response = this.api.command(command);
+        if ('success' === response.status)
+            this.emit('change', command);
+    }
+
+    /*
     registerCustomer: function(customer) {
         customer._local = 'true';
         var response = this.api.command({
@@ -58004,6 +58029,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
         });
         this.emit('change');
      }
+     */
  
 });
 

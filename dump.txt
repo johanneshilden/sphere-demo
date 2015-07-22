@@ -1,0 +1,154 @@
+{ name: 'A product',
+  _links: { self: { href: 'products/1' }, stock: [ [Object] ] } }
+{
+    "products/1": {
+        "name": "A product",
+        "_links": {
+            "self": {
+                "href": "products/1"
+            },
+            "stock": [
+                {
+                    "href": "stock/1"
+                }
+            ]
+        },
+        "_embedded": {
+            "stock": [
+                {
+                    "_links": {
+                        "product": {
+                            "href": "products/1"
+                        },
+                        "_collection": {
+                            "href": "products/1"
+                        },
+                        "self": {
+                            "href": "stock/1"
+                        }
+                    },
+                    "actual": 10,
+                    "available": 10,
+                    "_embedded": {}
+                }
+            ]
+        }
+    },
+    "products": {
+        "_links": {
+            "self": {
+                "href": "products"
+            },
+            "products": [
+                {
+                    "href": "products/1"
+                }
+            ]
+        },
+        "count": 1
+    },
+    "_log": [
+        {
+            "up": {
+                "method": "POST",
+                "resource": "products",
+                "payload": {
+                    "name": "A product",
+                    "_links": {
+                        "self": {
+                            "href": "products/1"
+                        },
+                        "stock": [
+                            {
+                                "href": "stock/1"
+                            }
+                        ]
+                    },
+                    "_embedded": {
+                        "stock": [
+                            {
+                                "_links": {
+                                    "product": {
+                                        "href": "products/1"
+                                    },
+                                    "_collection": {
+                                        "href": "products/1"
+                                    },
+                                    "self": {
+                                        "href": "stock/1"
+                                    }
+                                },
+                                "actual": 10,
+                                "available": 10,
+                                "_embedded": {}
+                            }
+                        ]
+                    }
+                }
+            },
+            "down": {
+                "method": "DELETE",
+                "resource": "products/1"
+            },
+            "index": 1,
+            "timestamp": 1437086379
+        },
+        {
+            "up": {
+                "method": "POST",
+                "resource": "stock",
+                "payload": {
+                    "_links": {
+                        "product": {
+                            "href": "products/1"
+                        },
+                        "_collection": {
+                            "href": "products/1"
+                        },
+                        "self": {
+                            "href": "stock/1"
+                        }
+                    },
+                    "actual": 10,
+                    "available": 10,
+                    "_embedded": {}
+                }
+            },
+            "down": {
+                "method": "DELETE",
+                "resource": "stock/1"
+            },
+            "index": 2,
+            "timestamp": 1437086379
+        }
+    ],
+    "stock/1": {
+        "_links": {
+            "product": {
+                "href": "products/1"
+            },
+            "_collection": {
+                "href": "products/1"
+            },
+            "self": {
+                "href": "stock/1"
+            }
+        },
+        "actual": 10,
+        "available": 10,
+        "_embedded": {}
+    },
+    "stock": {
+        "_links": {
+            "self": {
+                "href": "stock"
+            },
+            "stock": [
+                {
+                    "href": "stock/1"
+                }
+            ]
+        },
+        "count": 1
+    }
+}

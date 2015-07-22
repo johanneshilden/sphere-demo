@@ -24,6 +24,16 @@ var DataStore = assign({}, EventEmitter.prototype, {
         return data;
     },
 
+    invokeCommand: function(command) {
+        if ('POST' === command.method) {
+            command.payload._local = true;
+        }
+        var response = this.api.command(command);
+        if ('success' === response.status)
+            this.emit('change', command);
+    }
+
+    /*
     registerCustomer: function(customer) {
         customer._local = 'true';
         var response = this.api.command({
@@ -76,6 +86,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
         });
         this.emit('change');
      }
+     */
  
 });
 

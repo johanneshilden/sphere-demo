@@ -17,7 +17,7 @@ var NavComponent = React.createClass({
     render: function() {
         return (
             <div>
-                <Navbar className="navbar-fixed-top" brand={<a href="#">Sphere</a>} toggleNavKey={0}>
+                <Navbar className="navbar-fixed-top" brand={<a href="#"><img src="../common/assets/images/sphere-logo.png" style={{marginTop: '-2px'}} alt="" /></a>} toggleNavKey={0}>
                 </Navbar>
                 <p className="nav-info">Depot Management</p>
             </div>

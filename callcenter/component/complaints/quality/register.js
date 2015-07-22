@@ -389,8 +389,12 @@ var QualityComplaintRegistrationForm = React.createClass({
             "_embedded" : {"items": items}
         };
         AppDispatcher.dispatch({
-            actionType : 'create-complaint',
-            complaint  : complaint
+            actionType   : 'command-invoke',
+            command      : {
+                method   : 'POST',
+                resource : 'complaints',
+                payload  : complaint
+            }
         });
         this.refs.form.collapse();
         this.setState(this.getInitialState());

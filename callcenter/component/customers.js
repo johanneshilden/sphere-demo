@@ -18,14 +18,16 @@ var CustomersView = React.createClass({
     handleSelect: function(key) {
         this.setState({key: key});
     },
-    onNewRegistration: function() {
-        this.setState({key: 3});
+    onStoreChange: function(command) {
+        if (command && 'POST' === command.method && 'registrations' === command.resource) {
+            this.setState({key: 3});
+        }
     },
     componentDidMount: function() {
-        DataStore.on('new-registration', this.onNewRegistration);
+        DataStore.on('change', this.onStoreChange);
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('new-registration', this.onNewRegistration);
+        DataStore.removeListener('change', this.onStoreChange);
     },
     render: function() {
         return (

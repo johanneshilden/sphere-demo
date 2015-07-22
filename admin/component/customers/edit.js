@@ -344,13 +344,15 @@ var StatusComponent = React.createClass({
     toggleActive: function() {
         var newValue = !this.state.value;
         this.setState({value: newValue});
+        var patch = {
+            active: newValue
+        };
         AppDispatcher.dispatch({
-            actionType: 'toggle-customer-active',
-            patch: {
-                customerId: this.props.customerId,
-                data: {
-                    active: newValue
-                }
+            actionType : 'command-invoke',
+            command    : {
+                method   : 'PATCH',
+                resource : this.props.customerId,
+                payload  : patch
             }
         });
     },
@@ -386,21 +388,24 @@ var StatusComponent = React.createClass({
 var CustomerEditForm = React.createClass({
     handleSubmit: function() {
         if (this.isValid()) {
+            var customer = {
+                name          : this.refs.customerName.state.value,
+                address       : this.refs.customerAddress.state.value,
+                tin           : this.refs.customerTin.state.value,
+                phone         : this.refs.customerPhone.state.value,
+                area          : this.refs.customerArea.state.value,
+                priceCategory : this.refs.customerPriceCategory.state.value,
+                active        : this.refs.customerStatus.state.value
+            };
             AppDispatcher.dispatch({
-                actionType: 'update-customer',
-                update: {
-                    customerId: this.props.customerId,
-                    data: {
-                        name          : this.refs.customerName.state.value,
-                        address       : this.refs.customerAddress.state.value,
-                        tin           : this.refs.customerTin.state.value,
-                        phone         : this.refs.customerPhone.state.value,
-                        area          : this.refs.customerArea.state.value,
-                        priceCategory : this.refs.customerPriceCategory.state.value,
-                        active        : this.refs.customerStatus.state.value
-                    }
+                actionType : 'command-invoke',
+                command    : {
+                    method   : 'PUT',
+                    resource : 'customers/' + this.props.customerId,
+                    payload  : customer
                 }
             });
+            window.location.hash = 'customers';
         }
     },
     isValid: function() {

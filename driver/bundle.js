@@ -18,7 +18,7 @@ var NavComponent = React.createClass({displayName: "NavComponent",
     render: function() {
         return (
             React.createElement("div", null, 
-                React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, "Sphere"), toggleNavKey: 0}
+                React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, React.createElement("img", {src: "../common/assets/images/sphere-logo.png", style: {marginTop: '-2px'}, alt: ""})), toggleNavKey: 0}
                 ), 
                 React.createElement("p", {className: "nav-info"}, "Driver")
             )

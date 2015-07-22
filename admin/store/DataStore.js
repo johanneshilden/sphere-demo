@@ -24,35 +24,13 @@ var DataStore = assign({}, EventEmitter.prototype, {
         return data;
     },
 
-    registerCustomer: function(customer) {
-        customer._local = 'true';
-        var response = this.api.command({
-            method   : 'POST',
-            resource : 'registrations',
-            payload  : customer
-        });
-        this.emit('change');
-        this.emit('new-registration');
-    },
-
-    patchCustomer: function(patch) {
-        this.api.command({
-            method   : 'PATCH',
-            resource : 'customers/' + patch.customerId,
-            payload  : patch.data 
-        });
-        this.emit('change');
-    },
-
-    updateCustomer: function(update) {
-        this.api.command({
-            method   : 'PUT',
-            resource : 'customers/' + update.customerId,
-            payload  : update.data 
-        });
-        this.emit('change');
-        this.emit('alert', 'The customer was updated.');
-        window.location.hash = 'customers';
+    invokeCommand: function(command) {
+        if ('POST' === command.method) {
+            command.payload._local = true;
+        }
+        var response = this.api.command(command);
+        if ('success' === response.status) 
+            this.emit('change', command);
     }
 
 });

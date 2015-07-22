@@ -437,13 +437,15 @@ var StatusComponent = React.createClass({displayName: "StatusComponent",
     toggleActive: function() {
         var newValue = !this.state.value;
         this.setState({value: newValue});
+        var patch = {
+            active: newValue
+        };
         AppDispatcher.dispatch({
-            actionType: 'toggle-customer-active',
-            patch: {
-                customerId: this.props.customerId,
-                data: {
-                    active: newValue
-                }
+            actionType : 'command-invoke',
+            command    : {
+                method   : 'PATCH',
+                resource : this.props.customerId,
+                payload  : patch
             }
         });
     },
@@ -479,21 +481,24 @@ var StatusComponent = React.createClass({displayName: "StatusComponent",
 var CustomerEditForm = React.createClass({displayName: "CustomerEditForm",
     handleSubmit: function() {
         if (this.isValid()) {
+            var customer = {
+                name          : this.refs.customerName.state.value,
+                address       : this.refs.customerAddress.state.value,
+                tin           : this.refs.customerTin.state.value,
+                phone         : this.refs.customerPhone.state.value,
+                area          : this.refs.customerArea.state.value,
+                priceCategory : this.refs.customerPriceCategory.state.value,
+                active        : this.refs.customerStatus.state.value
+            };
             AppDispatcher.dispatch({
-                actionType: 'update-customer',
-                update: {
-                    customerId: this.props.customerId,
-                    data: {
-                        name          : this.refs.customerName.state.value,
-                        address       : this.refs.customerAddress.state.value,
-                        tin           : this.refs.customerTin.state.value,
-                        phone         : this.refs.customerPhone.state.value,
-                        area          : this.refs.customerArea.state.value,
-                        priceCategory : this.refs.customerPriceCategory.state.value,
-                        active        : this.refs.customerStatus.state.value
-                    }
+                actionType : 'command-invoke',
+                command    : {
+                    method   : 'PUT',
+                    resource : 'customers/' + this.props.customerId,
+                    payload  : customer
                 }
             });
+            window.location.hash = 'customers';
         }
     },
     isValid: function() {
@@ -596,8 +601,8 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
     },
     render: function() {
         var columns = this.state.collapsed
-            ? ["name", "tin", "area", "priceCategory", "position"]
-            : ["name", "address", "tin", "phone", "area", "priceCategory", "position"];
+            ? ["name", "tin", "area", "priceCategory", "position", "active", "edit"]
+            : ["name", "address", "tin", "phone", "area", "priceCategory", "position", "active", "edit"];
         var metadata = [
             {"columnName": "name", "displayName": "Name"}, 
             {"columnName": "address", "displayName": "Address"}, 
@@ -641,14 +646,16 @@ var CustomersListView = React.createClass({displayName: "CustomersListView",
                 "customComponent": React.createClass({
                     render: function() {
                         return (
-                            React.createElement("a", {href: '#customers/edit/' + this.props.rowData.key}, "Edit")
+                            React.createElement("a", {href: '#customers/edit/' + this.props.rowData.key, className: "btn btn-default btn-xs", role: "button"}, 
+                                React.createElement("span", {className: "glyphicon glyphicon-pencil", "aria-hidden": "true"}), " Edit"
+                            )
                         );
                     }
                 })
             }
         ];
         return (
-            React.createElement(Panel, null, 
+            React.createElement(Panel, {header: "Customers"}, 
                 React.createElement(Griddle, {
                     results: this.state.data, 
                     tableClassName: "table table-bordered", 
@@ -673,14 +680,11 @@ var AppDispatcher = assign(new Dispatcher, {});
 
 AppDispatcher.register(function(payload) {
     switch (payload.actionType) {
+        case 'command-invoke':
+            DataStore.invokeCommand(payload.command);
+            break;
         case 'alert':
             DataStore.emit('alert', payload.message);
-            break;
-        case 'toggle-customer-active':
-            DataStore.patchCustomer(payload.patch);
-            break;
-        case 'update-customer':
-            DataStore.updateCustomer(payload.update);
             break;
         default:
     }
@@ -709,12 +713,33 @@ var ApiResponse = {
     TYPE_ERROR: 'error'
 };
 
+function embed(resource, collection) {
+    var links = collection['_links'][resource],
+        items = [];
+    for (var i = 0; i < links.length; i++) {
+        var item = this.getItem(links[i].href);
+        if (item) {
+            delete item['_embedded'];
+            items.push(item);
+        }
+    }
+    if (!collection.hasOwnProperty('_embedded')) 
+        collection['_embedded'] = {};
+    collection['_embedded'][resource] = items;
+}
+
 var defaultPatterns = {
     "POST/:resource": function(context, request) {
         var payload = request.payload,
-            uri = getSelfHref(payload);
+            uri = getSelfHref(payload),
+            linked = null;
         this.insertItem(uri, payload, true);
-        this.addToCollection(context.resource, uri);
+        if ((linked = getLink(payload, 'collection'))) {
+            this.addToCollection(linked, uri, context.resource);
+            this.updateCollectionWith(linked, embed.bind(this, context.resource));
+        } else {
+            this.addToCollection(context.resource, uri);
+        }
         return {
             "status" : ApiResponse.TYPE_SUCCESS,
             "data"   : payload
@@ -723,7 +748,8 @@ var defaultPatterns = {
     "DELETE/:resource/:id": function(context) {
         var resource = context.resource,
             key = resource + '/' + context.id,
-            item = this.getItem(key);
+            item = this.getItem(key),
+            linked = null;
         if (!item) {
             return { 
                 "status"   : ApiResponse.TYPE_ERROR,
@@ -732,7 +758,12 @@ var defaultPatterns = {
             };
         }
         this.removeItem(key);
-        this.removeFromCollection(resource, key);
+        if ((linked = getLink(item, 'collection'))) {
+            this.removeFromCollection(linked, key, context.resource);
+            this.updateCollectionWith(linked, embed.bind(this, context.resource));
+        } else {
+          this.removeFromCollection(resource, key);
+        }
         return {
             "status"   : ApiResponse.TYPE_SUCCESS,
             "resource" : resource,
@@ -785,10 +816,14 @@ function setSelfHref(obj, uri) {
     obj['_links']['self'] = {"href": uri};
 }
 
-function getSelfHref(obj) {
-    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty('self'))
+function getLink(obj, resource) {
+    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty(resource))
         return null;
-    return obj['_links']['self'].href;
+    return obj['_links'][resource].href;
+}
+
+function getSelfHref(obj) {
+    return getLink(obj, 'self');
 }
 
 function Api(config) {
@@ -988,7 +1023,7 @@ StorageProxy.prototype.updateCollectionWith = function(key, update) {
 StorageProxy.prototype.expandLinks = function(item) {
     if ('object' === typeof item && item.hasOwnProperty('_links')) {
         for (var key in item['_links']) {
-            if ('self' == key || !item['_links'][key].href)
+            if ('self' === key || 'collection' === key || !item['_links'][key].href)
                 continue;
             var ref = item['_links'][key].href;
             if (this._data.hasOwnProperty(ref)) {
@@ -1150,7 +1185,7 @@ BrowserStorage.prototype.updateCollectionWith = function(key, update) {
 BrowserStorage.prototype.expandLinks = function(item) {
     if ('object' === typeof item && item.hasOwnProperty('_links')) {
         for (var key in item['_links']) {
-            if ('self' == key || !item['_links'][key].href)
+            if ('self' === key || 'collection' === key || !item['_links'][key].href)
                 continue;
             var cached = localStorage.getItem(this.namespaced(item['_links'][key].href)),
                 data = parseWithDefault(cached, null);
@@ -1629,7 +1664,7 @@ var NavComponent = React.createClass({displayName: "NavComponent",
         }
         return (
             React.createElement("div", null, 
-                React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, "Sphere"), toggleNavKey: 0}, 
+                React.createElement(Navbar, {className: "navbar-fixed-top", brand: React.createElement("a", {href: "#"}, React.createElement("img", {src: "../common/assets/images/sphere-logo.png", style: {marginTop: '-2px'}, alt: ""})), toggleNavKey: 0}, 
                     React.createElement(Nav, {eventKey: 0}, 
                         items
                     )
@@ -43798,35 +43833,13 @@ var DataStore = assign({}, EventEmitter.prototype, {
         return data;
     },
 
-    registerCustomer: function(customer) {
-        customer._local = 'true';
-        var response = this.api.command({
-            method   : 'POST',
-            resource : 'registrations',
-            payload  : customer
-        });
-        this.emit('change');
-        this.emit('new-registration');
-    },
-
-    patchCustomer: function(patch) {
-        this.api.command({
-            method   : 'PATCH',
-            resource : 'customers/' + patch.customerId,
-            payload  : patch.data 
-        });
-        this.emit('change');
-    },
-
-    updateCustomer: function(update) {
-        this.api.command({
-            method   : 'PUT',
-            resource : 'customers/' + update.customerId,
-            payload  : update.data 
-        });
-        this.emit('change');
-        this.emit('alert', 'The customer was updated.');
-        window.location.hash = 'customers';
+    invokeCommand: function(command) {
+        if ('POST' === command.method) {
+            command.payload._local = true;
+        }
+        var response = this.api.command(command);
+        if ('success' === response.status) 
+            this.emit('change', command);
     }
 
 });

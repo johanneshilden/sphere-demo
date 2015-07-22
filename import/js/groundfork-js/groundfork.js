@@ -1,5 +1,16 @@
-var $ = require('jquery');
+"use strict";
+var $          = require('jquery');
 var UrlPattern = require('url-pattern');
+var request    = require('request');
+
+var _localStorage;
+
+if (typeof localStorage === 'undefined' || localStorage === null) {
+    var LocalStorage = require('node-localstorage').LocalStorage;
+    _localStorage = new LocalStorage('./scratch');
+} else {
+    _localStorage = localStorage;
+}
 
 function extend() {
     for (var i = 1; i < arguments.length; i++) {
@@ -13,15 +24,74 @@ function extend() {
 }
 
 var ApiResponse = {
-    TYPE_SUCCESS: 'success',
-    TYPE_ERROR: 'error'
+    TYPE_SUCCESS : 'success',
+    TYPE_ERROR   : 'error'
 };
+
+function embedCollection(resource, collection) {
+    var links = collection['_links'][resource],
+        items = [];
+    for (var i = 0; i < links.length; i++) {
+        var item = this.getItem(links[i].href);
+        if (item) {
+            var _item = {};
+            for (var key in item) {
+                if ('_embedded' !== key) 
+                    _item[key] = item[key];
+            }
+            items.push(_item);
+        }
+    }
+    if (!collection.hasOwnProperty('_embedded')) 
+        collection['_embedded'] = {};
+    collection['_embedded'][resource] = items;
+}
+
+function addToParent(linked, uri, resource) {
+    this.updateCollectionWith(linked, function(collection) {
+        if (!collection.hasOwnProperty('_links')) 
+            collection['_links'] = {};
+        collection['_links'][resource] = {
+            'href': uri
+        };
+        var item = this.getItem(uri);
+        if (item) {
+            if (!collection.hasOwnProperty('_embedded')) 
+                collection['_embedded'] = {};
+            var _item = {};
+            for (var key in item) {
+                if ('_embedded' !== key) 
+                    _item[key] = item[key];
+            }
+            collection['_embedded'][resource] = _item;
+        }
+    }.bind(this));
+}
+
+function removeFromParent(linked, resource) {
+    this.updateCollectionWith(linked, function(collection) {
+        if (collection.hasOwnProperty('_links')) {
+            delete collection['_links'][resource];
+        }
+        if (collection.hasOwnProperty('_embedded')) {
+            delete collection['_embedded'][resource];
+        }
+    });
+}
 
 var defaultPatterns = {
     "POST/:resource": function(context, request) {
         var payload = request.payload,
-            uri = getSelfHref(payload);
-        this.insertItem(uri, payload, true);
+            uri = getSelfHref(payload),
+            linked = null;
+        this.insertItem(uri, payload);
+        if ((linked = getLink(payload, '_collection'))) {
+            this.addToCollection(linked, uri, context.resource);
+            this.updateCollectionWith(linked, embedCollection.bind(this, context.resource));
+        } 
+        if ((linked = getLink(payload, '_parent'))) {
+            addToParent.call(this, linked, uri, context.resource);
+        }
         this.addToCollection(context.resource, uri);
         return {
             "status" : ApiResponse.TYPE_SUCCESS,
@@ -31,7 +101,8 @@ var defaultPatterns = {
     "DELETE/:resource/:id": function(context) {
         var resource = context.resource,
             key = resource + '/' + context.id,
-            item = this.getItem(key);
+            item = this.getItem(key),
+            linked = null;
         if (!item) {
             return { 
                 "status"   : ApiResponse.TYPE_ERROR,
@@ -40,6 +111,13 @@ var defaultPatterns = {
             };
         }
         this.removeItem(key);
+        if ((linked = getLink(item, '_collection'))) {
+            this.removeFromCollection(linked, key, context.resource);
+            this.updateCollectionWith(linked, embedCollection.bind(this, context.resource));
+        } 
+        if ((linked = getLink(item, '_parent'))) {
+            removeFromParent.call(this, linked, context.resource);
+        }
         this.removeFromCollection(resource, key);
         return {
             "status"   : ApiResponse.TYPE_SUCCESS,
@@ -57,12 +135,37 @@ var defaultPatterns = {
                 "resource" : key 
             };
         }
-        var restore = {};
+        var restore = {},
+            selfHref = getSelfHref(item);
         for (var attr in request.payload) {
             restore[attr] = item[attr];
             item[attr] = request.payload[attr];
         }
+        if (!item.hasOwnProperty('_links')) 
+            item['_links'] = {};
+        if (selfHref)
+            item['_links']['self'] = { "href": selfHref };
         this.insertItem(key, item);
+        var oldLinked = getLink(restore, '_collection');
+        var newLinked = getLink(item, '_collection');
+        if (oldLinked !== newLinked) {
+            if (oldLinked) {
+                this.removeFromCollection(oldLinked, key, context.resource);
+                this.updateCollectionWith(oldLinked, embedCollection.bind(this, context.resource));
+            }
+            if (newLinked) {
+                this.addToCollection(newLinked, key, context.resource);
+                this.updateCollectionWith(newLinked, embedCollection.bind(this, context.resource));
+            }
+        }
+        oldLinked = getLink(restore, '_parent');
+        newLinked = getLink(item, '_parent');
+        if (oldLinked !== newLinked) {
+            if (oldLinked) 
+                removeFromParent.call(this, oldLinked, context.resource);
+            if (newLinked) 
+                addToParent.call(this, newLinked, key, context.resource);
+        }
         return {
             "status" : ApiResponse.TYPE_SUCCESS,
             "data"   : restore
@@ -78,7 +181,30 @@ var defaultPatterns = {
                 "resource" : key 
             };
         }
-        this.insertItem(key, request.payload, true);
+        if (!request.payload.hasOwnProperty('_links')) 
+            request.payload['_links'] = {};
+        request.payload['_links']['self'] = { "href": getSelfHref(item) };
+        this.insertItem(key, request.payload);
+        var oldLinked = getLink(item, '_collection');
+        var newLinked = getLink(request.payload, '_collection');
+        if (oldLinked !== newLinked) {
+            if (oldLinked) {
+                this.removeFromCollection(oldLinked, key, context.resource);
+                this.updateCollectionWith(oldLinked, embedCollection.bind(this, context.resource));
+            }
+            if (newLinked) {
+                this.addToCollection(newLinked, key, context.resource);
+                this.updateCollectionWith(newLinked, embedCollection.bind(this, context.resource));
+            }
+        }
+        oldLinked = getLink(item, '_parent');
+        newLinked = getLink(request.payload, '_parent');
+        if (oldLinked !== newLinked) {
+            if (oldLinked) 
+                removeFromParent.call(this, oldLinked, context.resource);
+            if (newLinked) 
+                addToParent.call(this, newLinked, key, context.resource);
+        }
         return {
             "status" : ApiResponse.TYPE_SUCCESS,
             "data"   : item
@@ -87,13 +213,20 @@ var defaultPatterns = {
 };
 
 function setSelfHref(obj, uri) {
-    extend(obj, {"_links":{"self":{"href": uri}}});
+    if (!obj.hasOwnProperty('_links')) {
+        obj['_links'] = {"self": null};
+    }
+    obj['_links']['self'] = {"href": uri};
+}
+
+function getLink(obj, resource) {
+    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty(resource))
+        return null;
+    return obj['_links'][resource].href;
 }
 
 function getSelfHref(obj) {
-    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty('self'))
-        return null;
-    return obj['_links']['self'].href;
+    return getLink(obj, 'self');
 }
 
 function Api(config) {
@@ -106,8 +239,6 @@ function Api(config) {
     this._messageLog         = [];
     this._debugMode          = false;
     this._interval           = 15;
-
-    this._initPatterns(defaultPatterns);
 
     if (config) {
         if (true === config.debugMode) {
@@ -130,6 +261,7 @@ function Api(config) {
         }
     }
 
+    this._initPatterns(defaultPatterns);
 }
 
 Api.prototype.pushToLog = function(orig) {
@@ -161,12 +293,13 @@ Api.prototype._route = function(request, store) {
             if ('POST' == request.method && !getSelfHref(request.payload)) {
                 setSelfHref(request.payload, store.firstAvailableKey(request.resource));
             }
-            var method = route.method.bind(store),
-                response = method(context, request);
+            var response = route.method.call(store, context, request);
+            if (!response)
+                continue;
             if (response.status === ApiResponse.TYPE_ERROR) {
                 if (true == this._debugMode) {
                     console.log(response);
-                    console.log('Conflict: ' + response._error + ' (' + response.resource + ')');
+                    console.log(response._error + ' (' + response.resource + ')');
                 }
                 response.request = request;
                 return response;
@@ -283,36 +416,15 @@ StorageProxy.prototype.updateCollectionWith = function(key, update) {
             "_links": {
                 "self": {"href": key}
             },
-            "_embedded": {},
             "count": 0
         };
-        collection['_embedded'][key] = [];
+        collection['_links'][key] = [];
     }
     update(collection);
     this._data[key] = collection;
 };
 
-StorageProxy.prototype.expandLinks = function(item) {
-    if ('object' === typeof item && item.hasOwnProperty('_links')) {
-        for (var key in item['_links']) {
-            if ('self' == key || !item['_links'][key].href)
-                continue;
-            var ref = item['_links'][key].href;
-            if (this._data.hasOwnProperty(ref)) {
-                var data = this._data[ref];
-                if (data) {
-                    if (!item.hasOwnProperty('_embedded'))
-                        item['_embedded'] = {};
-                    item['_embedded'][key] = data;
-                }
-            }
-        }
-    }
-};
-
-StorageProxy.prototype.insertItem = function(key, value, expand) {
-    if (true === expand)
-        this.expandLinks(value);
+StorageProxy.prototype.insertItem = function(key, value) {
     this._data[key] = value;
 };
 
@@ -328,14 +440,14 @@ StorageProxy.prototype.hasItem = function(key) {
     return this._data.hasOwnProperty(key);
 };
 
-StorageProxy.prototype.addToCollection = function(key, value) {
+StorageProxy.prototype.addToCollection = function(key, value, item) {
     var addToCollection = this._storage.addToCollection.bind(this); 
-    return addToCollection(key, value);
+    return addToCollection(key, value, item);
 };
 
-StorageProxy.prototype.removeFromCollection = function(key, value) {
+StorageProxy.prototype.removeFromCollection = function(key, value, item) {
     var removeFromCollection = this._storage.removeFromCollection.bind(this);
-    return removeFromCollection(key, value);
+    return removeFromCollection(key, value, item);
 };
 
 StorageProxy.prototype.firstAvailableKey = function(resource) {
@@ -343,6 +455,10 @@ StorageProxy.prototype.firstAvailableKey = function(resource) {
     while (this.hasItem(resource + '/' + i))
         i++;
     return resource + '/' + i;
+};
+
+StorageProxy.prototype.getSelfHref = function(obj) {
+    return this._storage.getSelfHref(obj);
 };
 
 Api.prototype.batchRun = function(batch, onComplete, onProgress) {
@@ -395,6 +511,61 @@ Api.prototype.command = function(request) {
     return response;
 };
 
+Api.prototype.post = function(resource, payload, options) {
+    if (options && payload) {
+        if (!payload.hasOwnProperty('_links')) 
+            payload['_links'] = {};
+        if (options.hasOwnProperty('collection')) {
+            payload['_links']['_collection'] = { 'href': options['collection'] };
+        }
+        if (options.hasOwnProperty('parent')) {
+             payload['_links']['_parent'] = { 'href': options['parent'] };
+        }
+    }
+    var response = this.command({
+        "method"   : 'POST',
+        "resource" : resource,
+        "payload"  : payload
+    });
+    if (response.status === ApiResponse.TYPE_SUCCESS) {
+        response.id = getSelfHref(response.data);
+    }
+    return response;
+};
+
+Api.prototype.delete = function(resource) {
+    return this.command({
+        "method"   : 'DELETE',
+        "resource" : resource
+    });
+};
+
+Api.prototype.patch = function(resource, payload) {
+    return this.command({
+        "method"   : 'PATCH',
+        "resource" : resource,
+        "payload"  : payload
+    });
+};
+
+Api.prototype.put = function(resource, payload, options) {
+    if (options && payload) {
+        if (!payload.hasOwnProperty('_links')) 
+            payload['_links'] = {};
+        if (options.hasOwnProperty('collection')) {
+            payload['_links']['_collection'] = { 'href': options['collection'] };
+        }
+        if (options.hasOwnProperty('parent')) {
+             payload['_links']['_parent'] = { 'href': options['parent'] };
+        }
+    }
+    return this.command({
+        "method"   : 'PUT',
+        "resource" : resource,
+        "payload"  : payload
+    });
+};
+
 Api.prototype.isBusy = function() {
     return this._busyStatus;
 };
@@ -436,32 +607,37 @@ function BrowserStorage(config) {
 
 BrowserStorage.prototype.updateCollectionWith = function(key, update) {
     var _key = this.namespaced(key),
-        cached = localStorage.getItem(_key),
+        cached = _localStorage.getItem(_key),
         collection = {
             "_links": {
                 "self": {"href": key}
             },
-            "_embedded": {},
             "count": 0
         };
-    collection['_embedded'][key] = [];
+    collection['_links'][key] = [];
     if (cached) 
         collection = parseWithDefault(cached, collection);
     update(collection);
-    localStorage.setItem(_key, JSON.stringify(collection));
+    _localStorage.setItem(_key, JSON.stringify(collection));
 };
 
-BrowserStorage.prototype.expandLinks = function(item) {
-    if ('object' === typeof item && item.hasOwnProperty('_links')) {
-        for (var key in item['_links']) {
-            if ('self' == key || !item['_links'][key].href)
-                continue;
-            var cached = localStorage.getItem(this.namespaced(item['_links'][key].href)),
-                data = parseWithDefault(cached, null);
-            if (data) {
-                if (!item.hasOwnProperty('_embedded'))
-                    item['_embedded'] = {};
-                item['_embedded'][key] = data;
+BrowserStorage.prototype.embed = function(obj, link) {
+    if (obj && 'object' === typeof obj && obj.hasOwnProperty('_links') && obj['_links'].hasOwnProperty(link)) {
+        var target = obj['_links'][link];
+        if (Array.isArray(target)) {
+            embedCollection.call(this, link, obj);
+        } else {
+            var item = this.getItem(target.href);
+            if (!obj.hasOwnProperty('_embedded')) {
+                obj['_embedded'] = {};
+            }
+            if (item) {
+                var _item = {};
+                for (var key in item) {
+                    if ('_embedded' !== key) 
+                        _item[key] = item[key];
+                }
+                obj['_embedded'][link] = _item;
             }
         }
     }
@@ -471,50 +647,60 @@ BrowserStorage.prototype.namespaced = function(str) {
     return this.namespace ? this.namespace + '.' + str : str;
 };
 
-BrowserStorage.prototype.insertItem = function(key, value, expand) {
-    if (true === expand)
-        this.expandLinks(value);
-    localStorage.setItem(this.namespaced(key), JSON.stringify(value));
+BrowserStorage.prototype.insertItem = function(key, value) {
+    _localStorage.setItem(this.namespaced(key), JSON.stringify(value));
 };
 
 BrowserStorage.prototype.getItem = function(key) {
-    var cached = localStorage.getItem(this.namespaced(key));
+    var cached = _localStorage.getItem(this.namespaced(key));
     return parseWithDefault(cached, null);
 };
 
 BrowserStorage.prototype.removeItem = function(key) {
-    localStorage.removeItem(this.namespaced(key));
+    _localStorage.removeItem(this.namespaced(key));
 };
 
 BrowserStorage.prototype.hasItem = function(key) {
-    return (null !== localStorage.getItem(this.namespaced(key)));
+    return (null !== _localStorage.getItem(this.namespaced(key)));
 };
 
-BrowserStorage.prototype.addToCollection = function(key, value) {
+BrowserStorage.prototype.addToCollection = function(key, value, item) {
     this.updateCollectionWith(key, function(collection) {
-        var items = collection['_embedded'][key];
+        if (!item)
+            item = key;
+        if (!collection.hasOwnProperty('_links')) {
+            collection['_links'] = {};
+        }
+        if (!collection['_links'].hasOwnProperty(item)) {
+            collection['_links'][item] = [];
+        }
+        var items = collection['_links'][item];
         for (var i = 0; i < items.length; i++) {
-            if (items[i]['_links']['self']['href'] === value) 
+            if (items[i].href === value) 
                 return;
         }
-        items.push({
-            "_links": {
-                "self": {"href": value}
-            }
-        });
-        collection['_embedded'][key] = items;
-        collection.count++;
+        items.push({"href": value});
+        collection['_links'][item] = items;
+        if (collection.hasOwnProperty('count'))
+            collection.count++;
     });
 };
 
-BrowserStorage.prototype.removeFromCollection = function(key, value) {
+BrowserStorage.prototype.removeFromCollection = function(key, value, item) {
     this.updateCollectionWith(key, function(collection) {
-        var items = collection['_embedded'][key];
+        if (!item)
+            item = key;
+        if (!collection.hasOwnProperty('_links')) 
+            return;
+        var items = collection['_links'][item];
+        if (!items)
+            return;
         for (var i = 0; i < items.length; i++) {
-            if (items[i]['_links']['self']['href'] === value) {
+            if (items[i].href === value) {
                 items.splice(i, 1);
-                collection['_embedded'][key] = items;
-                collection.count--;
+                collection['_links'][item] = items;
+                if (collection.hasOwnProperty('count'))
+                    collection.count--;
                 return;
             }
         }
@@ -528,10 +714,14 @@ BrowserStorage.prototype.firstAvailableKey = function(resource) {
     return resource + '/' + i;
 };
 
+BrowserStorage.prototype.getSelfHref = function(obj) {
+    return getSelfHref(obj);
+};
+
 BrowserStorage.prototype.keys = function() {
     var keys = [],
         len = this.namespace.length + 1;
-    for (var key in localStorage) {
+    for (var key in _localStorage) {
         if (0 == key.indexOf(this.namespace)) {
             keys.push(key.substr(len));
         }
@@ -547,8 +737,9 @@ function decorate(obj, items) {
             decorate(obj[key], items);
         } else if ('string' === typeof obj[key] && ('href' == key || 'resource' == key)) {
             for (var i = 0; i < items.length; i++) {
-                var item = items[i];
-                obj[key] = obj[key].replace(item, '||' + item + '||');
+                var item  = items[i],
+                    regex = new RegExp(item + '(/.*)?$');
+                obj[key] = obj[key].replace(regex, '||' + item + '||$1');
             }
         }
     }
@@ -590,6 +781,11 @@ function BasicHttpEndpoint(config) {
     if ('string' === typeof config.url) {
         this._url = config.url.replace(/\/$/, '');
     }
+    if ('function' === typeof config.requestHandler) {
+        this._requestHandler = config.requestHandler;
+    } else {
+        this._requestHandler = BasicHttpEndpoint.ajaxRequestHandler;
+    }
 
 }
 
@@ -613,7 +809,7 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
             timestamp : log[i].timestamp
         };
         if ('POST' == obj.up.method)
-            items.push(obj.up.payload['_links']['self']['href']);
+            items.push(getSelfHref(obj.up.payload));
         decorate(obj.up, items);
         decorate(obj.down, items);
         data.commit.push(obj);
@@ -621,23 +817,9 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
     if (this._onRequestStart) {
         this._onRequestStart(); 
     }
-    $.support.cors = true;
-    $.ajax({
-        url: this._url + '/' + this._syncSuffix,
-        type: 'POST',
-        headers: {
-            "Authorization": "Basic " + btoa(this._clientKey + ':' + this._clientSecret)
-        },
-        data: JSON.stringify(data),
-        error: function(e) {
-            if ('function' === typeof onError) {
-                onError(e);
-            }
-            if (this._onRequestComplete) {
-                this._onRequestComplete(); 
-            }
-        }.bind(this),
-        success: function(resp) {
+    var requestHandler = this._requestHandler.bind(this);
+    requestHandler(data, 
+        function(resp) {
             if (this._onRequestComplete) {
                 this._onRequestComplete(); 
             }
@@ -654,9 +836,45 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
                 }
             }, onProgress);
             this._device.setSyncPoint(resp.syncPoint);
+        }.bind(this), 
+        function(e) {
+            if ('function' === typeof onError) {
+                onError(e);
+            }
+            if (this._onRequestComplete) {
+                this._onRequestComplete(); 
+            }
         }.bind(this)
-    });
+    );
     return true;
+}
+
+BasicHttpEndpoint.ajaxRequestHandler = function(data, onSuccess, onError) {
+    $.support.cors = true;
+    $.ajax({
+        url: this._url + '/' + this._syncSuffix,
+        type: 'POST',
+        headers: {
+            "Authorization": "Basic " + btoa(this._clientKey + ':' + this._clientSecret)
+        },
+        data: JSON.stringify(data),
+        error: onError,
+        success: onSuccess
+    });
+}
+
+BasicHttpEndpoint.nodeRequestHandler = function(data, onSuccess, onError) {
+    request.post({
+        url: this._url + '/' + this._syncSuffix,
+        body: data,
+        json: true
+    }, function(err, httpResponse, resp) {
+        if (err) {
+            onError(err);
+        } else {
+            onSuccess(resp);
+        }
+    }.bind(this)).auth(this._clientKey, this._clientSecret, true);
 }
 
 module.exports = {

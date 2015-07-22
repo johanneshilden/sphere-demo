@@ -290,14 +290,19 @@ var PriceCategorySelect = React.createClass({
 var CustomerRegistrationForm = React.createClass({
     handleSubmit: function() {
         if (this.isValid()) {
+            var customer = {
+                name          : this.refs.customerName.state.value,
+                address       : this.refs.customerAddress.state.value,
+                phone         : this.refs.customerPhone.state.value,
+                area          : this.refs.customerArea.state.value,
+                priceCategory : this.refs.customerPriceCategory.state.value
+            };
             AppDispatcher.dispatch({
-                actionType: 'customer-registration',
-                customer: {
-                    name          : this.refs.customerName.state.value,
-                    address       : this.refs.customerAddress.state.value,
-                    phone         : this.refs.customerPhone.state.value,
-                    area          : this.refs.customerArea.state.value,
-                    priceCategory : this.refs.customerPriceCategory.state.value
+                actionType   : 'command-invoke',
+                command      : {
+                    method   : 'POST',
+                    resource : 'registrations',
+                    payload  : customer
                 }
             });
             this.resetForm();
