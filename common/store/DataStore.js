@@ -23,6 +23,10 @@ StoreItem.prototype.getCollection = function(link) {
     return this.getLink('_collection');
 };
 
+StoreItem.prototype.embed = function(resource) {
+    DataStore.store.embed(this, resource);
+};
+
 var DataStore = assign({}, EventEmitter.prototype, {
 
     fetchCollection: function(collection) {
@@ -36,6 +40,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
                     obj = null;
                 if (href && (obj = this.store.getItem(href))) {
                     assign(obj, StoreItem.prototype);
+                    obj.id  = href;
                     obj.key = href.split('/')[1];
                     data.push(obj);
                 }
@@ -55,6 +60,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
         }
         if (item) {
             assign(item, StoreItem.prototype);
+            item.id = item.getLink('self');
         }
         return item;
     },
@@ -67,7 +73,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
     },
 
     timeFormatter: function(value, unit, suffix) {
-        if ('second' == unit) {
+        if ('second' === unit) {
             return 'less than a minute ago';
         }
         if (value !== 1) {
@@ -84,6 +90,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
         for (var i = 0; i < links.length; i++) {
             var item = this.store.getItem(links[i].href);
             if (item) {
+                assign(item, StoreItem.prototype);
                 var _item = {};
                 for (var key in item) {
                     if ('_embedded' !== key) 
@@ -113,6 +120,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
         } else {
             var item = this.store.getItem(target.href);
             if (item) {
+                assign(item, StoreItem.prototype);
                 if (!obj.hasOwnProperty('_embedded')) 
                     obj['_embedded'] = {};
                 var _item = {};

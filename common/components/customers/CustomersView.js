@@ -1,58 +1,59 @@
-var Bootstrap                = require('react-bootstrap');
-var Griddle                  = require('griddle-react');
-var React                    = require('react');
-var PendingRegistrationsView = require('./PendingRegistrationsView');
-var DataStore                = require('../../store/DataStore');
-var AppDispatcher            = require('../../dispatcher/AppDispatcher');
-var BootstrapPager           = require('../BootstrapPager');
+import Bootstrap                  from 'react-bootstrap'
+import Griddle                    from 'griddle-react'
+import React                      from 'react'
+import assign                     from 'object-assign'
 
-var Panel                    = Bootstrap.Panel;
-var TabPane                  = Bootstrap.TabPane;
-var TabbedArea               = Bootstrap.TabbedArea;
-var Button                   = Bootstrap.Button;
-var ButtonGroup              = Bootstrap.ButtonGroup;
-var Input                    = Bootstrap.Input;
+import AppDispatcher              from '../../dispatcher/AppDispatcher'
+import BootstrapPager             from '../BootstrapPager'
+import DataStore                  from '../../store/DataStore'
+import FormElementMixin           from '../FormElementMixin'
+import FormItemStore              from '../../store/FormItemStore'
+import MapComponent               from '../MapComponent'
+import PendingRegistrationsView   from './PendingRegistrationsView'
 
-var NameInput = React.createClass({
-    getInitialState: function() {
-        return {
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null,
-            length = newValue.length;
-        if (length > 2) { 
-            validationState = 'success'; 
+import {Modal, Button, ButtonGroup, Input, Panel, TabPane, TabbedArea} from 'react-bootstrap'
+
+const NameStore = assign({}, FormItemStore, {
+    validate: function() {
+        if (this.value.length > 2) { 
+            this.state = 'success'
+            this.hint  = null
         } else {
-            validationState = 'error'; 
+            this.state = 'error'
             if (length) {
-                hint = 'The name must be at least 3 characters long.';
+                this.hint = 'The name must be at least 3 characters long.'
             } else {
-                hint = 'This value is required.';
+                this.hint = 'This value is required.'
             }
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        }); 
-        return ('success' === validationState);
+    }
+})
+
+AppDispatcher.register(payload => {
+    if ('customer-form-name-assign' === payload.actionType) {
+        NameStore.setValue(payload.value)
+    } else if ('customer-form-reset' === payload.actionType) {
+        NameStore.reset()
+    } else if ('customer-form-refresh' === payload.actionType) {
+        NameStore.refresh()
+    }
+})
+
+const NameInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: NameStore,
+    getInitialState: function() {
+        return {
+            value           : '',
+            validationState : null,
+            hint            : null
+        }
     },
-    reset: function() {
-        this.setState(this.getInitialState());
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'customer-form-name-assign',
+            value      : value
+        })
     },
     render: function() {
         return (
@@ -66,46 +67,47 @@ var NameInput = React.createClass({
               help={this.state.hint}
               onChange={this.handleChange}
               type='text' />
-        );
+        )
     }
-});
+})
 
-var AddressInput = React.createClass({
+const AddressStore = assign({}, FormItemStore, {
+    validate: function() {
+        if (this.value.length) { 
+            this.state = 'success'
+            this.hint  = null
+        } else {
+            this.state = 'error'
+            this.hint = 'This value is required.'
+        }
+    }
+})
+
+AppDispatcher.register(payload => {
+    if ('customer-form-address-assign' === payload.actionType) {
+        AddressStore.setValue(payload.value)
+    } else if ('customer-form-reset' === payload.actionType) {
+        AddressStore.reset()
+    } else if ('customer-form-refresh' === payload.actionType) {
+        AddressStore.refresh()
+    }
+})
+
+const AddressInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: AddressStore,
     getInitialState: function() {
         return {
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null,
-            length = newValue.length;
-        if (length) { 
-            validationState = 'success'; 
-        } else {
-            validationState = 'error'; 
-            hint = 'This value is required.';
+            value           : '',
+            validationState : null,
+            hint            : null
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        }); 
-        return ('success' === validationState);
     },
-    reset: function() {
-        this.setState(this.getInitialState());
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'customer-form-address-assign',
+            value      : value
+        })
     },
     render: function() {
         return (
@@ -119,46 +121,37 @@ var AddressInput = React.createClass({
               help={this.state.hint}
               onChange={this.handleChange}
               type='text' />
-        );
+        )
     }
-});
+})
 
-var TinInput = React.createClass({
+const TinStore = assign({}, FormItemStore)
+
+AppDispatcher.register(payload => {
+    if ('customer-form-tin-assign' === payload.actionType) {
+        TinStore.setValue(payload.value)
+    } else if ('customer-form-reset' === payload.actionType) {
+        TinStore.reset()
+    } else if ('customer-form-refresh' === payload.actionType) {
+        TinStore.refresh()
+    }
+})
+
+const TinInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: TinStore,
     getInitialState: function() {
         return {
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null,
-            length = newValue.length;
-        if (length) { 
-            validationState = 'success'; 
-        } else {
-            validationState = 'error'; 
-            hint = 'This value is required.';
+            value           : '',
+            validationState : null,
+            hint            : null
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        }); 
-        return ('success' === validationState);
     },
-    reset: function() {
-        this.setState(this.getInitialState());
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'customer-form-tin-assign',
+            value      : value
+        })
     },
     render: function() {
         return (
@@ -172,50 +165,51 @@ var TinInput = React.createClass({
               help={this.state.hint}
               onChange={this.handleChange}
               type='text' />
-        );
+        )
     }
-});
+})
 
-var PhoneInput = React.createClass({
-    getInitialState: function() {
-        return {
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null,
-            length = newValue.length;
-        if (length) { 
-            validationState = 'success'; 
-            if (!/^\+?[0-9\.\-\s]+$/.test(newValue)) {
-                validationState = 'error'; 
-                hint = 'Not a phone number.';
+const PhoneStore = assign({}, FormItemStore, {
+    validate: function() {
+        if (this.value.length) { 
+            this.state = 'success' 
+            this.hint  = null
+            if (!/^\+?[0-9\.\-\s]+$/.test(this.value)) {
+                this.state = 'error'
+                this.hint  = 'Not a valid phone number.'
             }
         } else {
-            validationState = 'error'; 
-            hint = 'This value is required.';
+            this.state = 'error'
+            this.hint  = 'This value is required.'
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        }); 
-        return ('success' === validationState);
+    }
+})
+
+AppDispatcher.register(payload => {
+    if ('customer-form-phone-assign' === payload.actionType) {
+        PhoneStore.setValue(payload.value)
+    } else if ('customer-form-reset' === payload.actionType) {
+        PhoneStore.reset()
+    } else if ('customer-form-refresh' === payload.actionType) {
+        PhoneStore.refresh()
+    }
+})
+
+const PhoneInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: PhoneStore,
+    getInitialState: function() {
+        return {
+            value           : '',
+            validationState : null,
+            hint            : null
+        }
     },
-    reset: function() {
-        this.setState(this.getInitialState());
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'customer-form-phone-assign',
+            value      : value
+        })
     },
     render: function() {
         return (
@@ -229,79 +223,66 @@ var PhoneInput = React.createClass({
               help={this.state.hint}
               onChange={this.handleChange}
               type='text' />
-        );
+        )
     }
-});
+})
 
-var AreaSelect = React.createClass({
-    fetchAreas: function() {
-        var areas = DataStore.fetchCollection('areas');
-        if (!areas || !areas.length) {
-            areas = [{
-                'name': 'Global'
-            }];
+const AreaStore = assign({}, FormItemStore, {
+    validate: function() {
+        if (this.value.length) { 
+            this.state = 'success'
+            this.hint  = null
+        } else {
+            this.state = 'error'
+            this.hint  = 'This value is required.'
         }
-        for (var i = 0; i < areas.length; i++) {
-            areas[i].key = 'area-' + i;
-        }
-        this.setState({areas: areas});
-    },
+    }
+})
+
+AppDispatcher.register(payload => {
+    if ('customer-form-area-assign' === payload.actionType) {
+        AreaStore.setValue(payload.value)
+    } else if ('customer-form-reset' === payload.actionType) {
+        AreaStore.reset()
+    } else if ('customer-form-refresh' === payload.actionType) {
+        AreaStore.refresh()
+    }
+})
+
+const AreaSelect = React.createClass({
+    mixins: [FormElementMixin],
+    store: AreaStore,
     getInitialState: function() {
         return {
-            areas: [],
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null;
-        if (!newValue) {
-            validationState = 'error';
-            hint = 'You must select an area.';
-        } else {
-            validationState = 'success';
+            value           : '',
+            validationState : null,
+            hint            : null,
+            areas           : []
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        });
-        return ('success' === validationState);
+    },
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'customer-form-area-assign',
+            value      : value
+        })
+    },
+    fetchAreas: function() {
+        let areas = DataStore.fetchCollection('areas')
+        if (!areas.length) {
+            areas = [{ 'name': 'Global' }]
+        }
+        this.setState({areas: areas})
     },
     componentDidMount: function() {
-        this.fetchAreas();
-        DataStore.on('change', this.fetchAreas);
+        this.fetchAreas()
+        DataStore.on('change', this.fetchAreas)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchAreas);
-    },
-    reset: function() {
-        this.setState(this.getInitialState());
-        this.fetchAreas();
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
-    },
-    renderPlaceholder: function() {
-        if (this.state.value) 
-            return null;
-        return (
-            <option
-              value=''>
-                Select an area from the list
-            </option>
-        );
+        DataStore.removeListener('change', this.fetchAreas)
     },
     render: function() {
-        var areas = this.state.areas;
+        let areas = this.state.areas,
+            i = 0
         return (
             <Input
               label='Area'
@@ -312,90 +293,82 @@ var AreaSelect = React.createClass({
               help={this.state.hint}
               onChange={this.handleChange}
               type='select'>
-                {this.renderPlaceholder()}
-                {areas.map(function(area) {
+                {this.state.value ? null : (
+                    <option
+                      value=''>
+                        Select an area from the list
+                    </option>
+                )}
+                {areas.map(area => {
                     return (
                         <option 
-                          key={area.key} 
+                          key={i++} 
                           value={area.name}>
                           {area.name}
                         </option>
-                    );
+                    )
                 })}
             </Input>
-        );
+        )
     }
-});
+})
 
-var PriceCategorySelect = React.createClass({
-    fetchPriceCategories: function() {
-        var categories = DataStore.fetchCollection('price-categories');
-        if (!categories || !categories.length) {
-            categories = [{
-                'name': 'Default', 
-            }];
+const PriceCategoryStore = assign({}, FormItemStore, {
+    validate: function() {
+        if (this.value.length) { 
+            this.state = 'success'
+            this.hint  = null
+        } else {
+            this.state = 'error'
+            this.hint  = 'This value is required.'
         }
-        for (var i = 0; i < categories.length; i++) {
-            categories[i].key = 'price-category--' + i;
-        }
-        this.setState({categories: categories});
-    },
+    }
+})
+
+AppDispatcher.register(payload => {
+    if ('customer-form-price-category-assign' === payload.actionType) {
+        PriceCategoryStore.setValue(payload.value)
+    } else if ('customer-form-reset' === payload.actionType) {
+        PriceCategoryStore.reset()
+    } else if ('customer-form-refresh' === payload.actionType) {
+        PriceCategoryStore.refresh()
+    }
+})
+
+const PriceCategorySelect = React.createClass({
+    mixins: [FormElementMixin],
+    store: PriceCategoryStore,
     getInitialState: function() {
         return {
-            categories: [],
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null;
-        if (!newValue) {
-            validationState = 'error';
-            hint = 'You must select a price category.';
-        } else {
-            validationState = 'success';
+            value           : '',
+            validationState : null,
+            hint            : null,
+            categories      : []
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        });
-        return ('success' === validationState);
+    },
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'customer-form-price-category-assign',
+            value      : value
+        })
+    },
+    fetchPriceCategories: function() {
+        let categories = DataStore.fetchCollection('price-categories')
+        if (!categories.length) {
+            categories = [{ 'name': 'Default' }]
+        }
+        this.setState({categories: categories})
     },
     componentDidMount: function() {
-        this.fetchPriceCategories();
-        DataStore.on('change', this.fetchPriceCategories);
+        this.fetchPriceCategories()
+        DataStore.on('change', this.fetchPriceCategories)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchPriceCategories);
-    },
-    reset: function() {
-        this.setState(this.getInitialState());
-        this.fetchPriceCategories();
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
-    },
-    renderPlaceholder: function() {
-        if (this.state.value) 
-            return null;
-        return (
-            <option
-              value=''>
-                Select a price category from the list
-            </option>
-        );
+        DataStore.removeListener('change', this.fetchPriceCategories)
     },
     render: function() {
-        var categories = this.state.categories;
+        let categories = this.state.categories,
+            i = 0
         return (
             <Input
               label='Price category'
@@ -406,79 +379,78 @@ var PriceCategorySelect = React.createClass({
               help={this.state.hint}
               onChange={this.handleChange}
               type='select'>
-                {this.renderPlaceholder()}
-                {categories.map(function(category) {
+                {this.state.value ? null : (
+                    <option
+                      value=''>
+                        Select a price category from the list
+                    </option>
+                )}
+                {categories.map(category => {
                     return (
                         <option 
-                          key={category.key} 
+                          key={i++} 
                           value={category.name}>
                           {category.name}
                         </option>
-                    );
+                    )
                 })}
             </Input>
-        );
+        )
     }
-});
+})
 
-var CustomerRegistrationForm = React.createClass({
+const CustomerRegistrationForm = React.createClass({
     getInitialState: function() {
         return {
-            template: '',
-            geoLocation: null
-        };
+            template    : '',
+            geoLocation : null
+        }
     },
     handlePartial: function(resource) {
-        var partial = DataStore.store.getItem(resource);
+        let partial = DataStore.getItem(resource)
         if (partial) {
-            this.resetForm();
-            this.setState({template: resource});
-            this.refs.customerName._update(partial.name);
-            this.refs.customerAddress._update(partial.address);
-            this.refs.customerPhone._update(partial.phone);
-            this.refs.customerArea._update(partial.area);
+            this.resetForm()
+            this.setState({template: resource})
+            NameStore.setValue(partial.name)
+            AddressStore.setValue(partial.address)
+            PhoneStore.setValue(partial.phone)
+            AreaStore.setValue(partial.area)
         }
     },
     componentDidMount: function() {
-        DataStore.on('registration-finalize', this.handlePartial);
+        DataStore.on('registration-finalize', this.handlePartial)
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
+            navigator.geolocation.getCurrentPosition(position => {
                 this.setState({geoLocation: {
                     latitude  : position.coords.latitude,
                     longitude : position.coords.longitude
-                }});
-            }.bind(this));
+                }})
+            })
         }
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('registration-finalize', this.handlePartial);
+        DataStore.removeListener('registration-finalize', this.handlePartial)
     },
     handleSubmit: function() {
-        var isValid = (this.refs.customerName.isValid()
-            & this.refs.customerAddress.isValid()
-            & this.refs.customerTin.isValid()
-            & this.refs.customerPhone.isValid()
-            & this.refs.customerArea.isValid()
-            & this.refs.customerPriceCategory.isValid()
-            & this.refs.customerArea.isValid());
+        let isValid = !!( NameStore.isValid()
+                        & AddressStore.isValid()
+                        & PhoneStore.isValid()
+                        & AreaStore.isValid()
+                        & PriceCategoryStore.isValid() )
         if (!isValid) {
-            this.refs.customerName.forceValidate();
-            this.refs.customerAddress.forceValidate();
-            this.refs.customerTin.forceValidate();
-            this.refs.customerPhone.forceValidate();
-            this.refs.customerArea.forceValidate();
-            this.refs.customerPriceCategory.forceValidate();
-            this.refs.customerArea.forceValidate();
+            AppDispatcher.dispatch({
+                actionType: 'customer-form-refresh'
+            })
         } else {
             var customer = {
-                name          : this.refs.customerName.state.value,
-                address       : this.refs.customerAddress.state.value,
-                tin           : this.refs.customerTin.state.value,
-                phone         : this.refs.customerPhone.state.value,
-                area          : this.refs.customerArea.state.value,
-                priceCategory : this.refs.customerPriceCategory.state.value,
+                name          : NameStore.getValue(),
+                address       : AddressStore.getValue(),
+                tin           : TinStore.getValue(),
+                phone         : PhoneStore.getValue(),
+                area          : AreaStore.getValue(),
+                priceCategory : PriceCategoryStore.getValue(),
                 position      : this.state.geoLocation
-            };
+            }
             AppDispatcher.dispatch({
                 actionType : 'command-invoke',
                 command    : {
@@ -490,26 +462,26 @@ var CustomerRegistrationForm = React.createClass({
                     message : 'A new customer was successfully registered.',
                     level   : 'success'
                 }
-            });
-            AppDispatcher.dispatch({
-                actionType : 'command-invoke',
-                command    : {
-                    method   : 'DELETE',
-                    resource : this.state.template
-                }
-            });
-            this.props.onNewRegistration();
-            this.resetForm();
-        } 
+            })
+            let template = this.state.template
+            if (template) {
+                AppDispatcher.dispatch({
+                    actionType : 'command-invoke',
+                    command    : {
+                        method   : 'DELETE',
+                        resource : this.state.template
+                    }
+                })
+            }
+            this.props.onNewRegistration()
+            this.resetForm()
+        }
     },
     resetForm: function() {
-        this.refs.customerName.reset();
-        this.refs.customerAddress.reset();
-        this.refs.customerTin.reset();
-        this.refs.customerPhone.reset();
-        this.refs.customerArea.reset();
-        this.refs.customerPriceCategory.reset();
-        this.setState({template: ''});
+        AppDispatcher.dispatch({
+            actionType: 'customer-form-reset'
+        })
+        this.setState({template: ''})
     },
     render: function() {
         return (
@@ -531,6 +503,8 @@ var CustomerRegistrationForm = React.createClass({
                     <Button
                       bsStyle='primary'
                       onClick={this.handleSubmit}>
+                        <Bootstrap.Glyphicon 
+                          glyph='ok' />
                         Save
                     </Button>
                     <Button
@@ -540,52 +514,84 @@ var CustomerRegistrationForm = React.createClass({
                     </Button>
                 </ButtonGroup>
             </Panel>
-        );
+        )
     }
-});
+})
 
-var CustomersView = React.createClass({
+const CustomersView = React.createClass({
     getDefaultProps: function() {
         return {
             resultsPerPage: 8
-        };
+        }
     },
     getInitialState: function() {
         return {
-            key       : 1,
-            collapsed : window.innverWidth < 992
-        };
+            key           : 1,
+            collapsed     : window.innverWidth < 992,
+            registrations : [],
+            modalVisible  : false,
+            latitude      : 0,
+            longitude     : 0
+        }
+    },
+    fetchPartial: function() {
+        let data = DataStore.fetchCollection('registrations')
+        this.setState({registrations: data})
     },
     handleSelect: function(key) {
-        this.setState({key: key});
+        this.setState({key: key})
+        this.refs.customerRegistrationForm.resetForm()
     },
     handlePartial: function() {
-        this.setState({key: 2});
+        this.setState({key: 2})
     },
     handleNewRegistration: function() {
-        this.setState({key: 1});
+        this.setState({key: 1})
     },
     handleResize: function() {
-        var innerWidth = window.innerWidth,
+        let innerWidth = window.innerWidth,
             oldVal = this.state.collapsed,
-            newVal = innerWidth < 992;
+            newVal = innerWidth < 992
         if (oldVal != newVal)
-            this.setState({collapsed: newVal});
+            this.setState({collapsed: newVal})
     },
     componentDidMount: function() {
-        DataStore.on('registration-finalize', this.handlePartial);
-        this.handleResize();
-        window.addEventListener('resize', this.handleResize);
+        DataStore.on('registration-finalize', this.handlePartial)
+        this.fetchPartial()
+        DataStore.on('change', this.fetchPartial)
+        this.handleResize()
+        window.addEventListener('resize', this.handleResize)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('registration-finalize', this.handlePartial);
-        window.removeEventListener('resize', this.handleResize);
+        DataStore.removeListener('registration-finalize', this.handlePartial)
+        window.removeEventListener('resize', this.handleResize)
+        DataStore.removeListener('change', this.fetchPartial)
+    },
+    handleRowClick: function(row, event) {
+        if ('BUTTON' === event.target.nodeName || 'BUTTON' === event.target.parentNode.nodeName) {
+            let position = row.props.data.position
+            if (position) {
+                //this.setState({
+                //    latitude     : position.latitude,
+                //    longitude    : position.longitude,
+                //    modalVisible : true
+                //})
+                let lat = position.latitude,
+                    lng = position.longitude
+                window.location = 'https://www.google.com/maps/dir//' + lat + ',' + lng + '/@' + lat + ',' + lng + ',13z'
+                return
+            }
+        }
+        window.location.hash = row.props.data.id 
+    },
+    closeModal: function() {
+        this.setState({modalVisible: false})
     },
     render: function() {
-        var columns = this.state.collapsed
-            ? ['_local', 'name', 'area', 'priceCategory', 'position']
-            : ['_local', 'name', 'address', 'phone', 'area', 'priceCategory', 'position'];
-        var metadata = [
+        let columns = this.state.collapsed
+            ? ['name', 'area', 'priceCategory', 'position']
+            : ['name', 'address', 'phone', 'area', 'priceCategory', 'position']
+        let metadata = [
             {
                 'columnName': '_local', 
                 'displayName': '',
@@ -594,12 +600,12 @@ var CustomersView = React.createClass({
                     render: function() {
                         if (this.props.rowData['_local'])
                             return (
-                                <span className='glyphicon glyphicon-flag'></span>
-                            );
+                                <Bootstrap.Glyphicon glyph='phone' bsSize='xsmall' />
+                            )
                         else
                             return (
                                 <span />
-                            );
+                            )
                     }
                 })
             }, 
@@ -609,8 +615,14 @@ var CustomersView = React.createClass({
                 'customComponent': React.createClass({
                     render: function() {
                         return (
-                            <a href={'#' + this.props.rowData.href}>{this.props.rowData.name}</a>
-                        );
+                            <span>
+                                <Bootstrap.Glyphicon 
+                                  glyph='user' 
+                                  bsSize='xsmall' 
+                                  style={{marginRight: '.3em'}} />
+                                {this.props.rowData.name}
+                            </span>
+                        )
                     }
                 })
             }, 
@@ -621,63 +633,94 @@ var CustomersView = React.createClass({
             {'columnName': 'priceCategory', 'displayName': 'Price category'},
             {
                 'columnName': 'position', 
-                'displayName': 'Position',
+                'displayName': 'Location',
                 'customComponent': React.createClass({
                     render: function() {
-                        var position = this.props.rowData.position;
+                        let position = this.props.rowData.position
                         if (!position || !position.latitude || !position.longitude) {
                             return ( 
                                 <span>Unknown</span>
-                            );
+                            )
                         }
                         return (
-                            <a 
-                              href={'http://maps.google.com/?ie=UTF8&hq=&ll=' + position.latitude + ',' + position.longitude + '&z=16'} 
-                              className='btn btn-default btn-xs btn-block' 
-                              role='button'>
-                                <span 
-                                  className='glyphicon glyphicon-map-marker' 
-                                  aria-hidden={true}></span>Show on map
-                            </a>
-                        );
+                            <Button 
+                              block
+                              bsStyle='default'
+                              bsSize='xsmall'>
+                                <Bootstrap.Glyphicon 
+                                  glyph='map-marker' />
+                                Show directions
+                            </Button>
+                        )
                     }
                 })
             }
-        ];
+        ]
+        let count = this.state.registrations.length,
+            pendingRegistrationsTab = count ? (
+            <span>
+                Pending registrations<Bootstrap.Badge>{count}</Bootstrap.Badge>
+            </span>
+        ) : (
+            <span>Pending registrations</span>
+        )
         return (
-            <Panel 
-              className='panel-fill'
-              header='Customers' 
-              bsStyle='primary'>
-                <TabbedArea fill 
-                  animation={false}
-                  activeKey={this.state.key} 
-                  onSelect={this.handleSelect}>
-                    <TabPane eventKey={1} tab='All customers'>
-                        <Panel>
-                            <Griddle 
-                              results={this.props.customers} 
-                              showFilter={true}
-                              resultsPerPage={this.props.resultsPerPage}
-                              useGriddleStyles={false}
-                              columnMetadata={metadata}
-                              useCustomPagerComponent={true}
-                              customPagerComponent={BootstrapPager}
-                              tableClassName='table table-bordered table-select table-condensed' 
-                              columns={columns} />
-                        </Panel>
-                    </TabPane>
-                    <TabPane eventKey={2} tab="Register new customer">
-                        <CustomerRegistrationForm 
-                          onNewRegistration={this.handleNewRegistration} />
-                    </TabPane>
-                    <TabPane eventKey={3} tab="Pending registrations">
-                        <PendingRegistrationsView />
-                    </TabPane>
-                </TabbedArea>
-            </Panel>
-        );
+            <div>
+                <Modal
+                  bsSize='large'
+                  show={this.state.modalVisible}
+                  onHide={this.closeModal}>
+                    <Modal.Header closeButton>
+                        <Modal.Title>
+                            Map
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <MapComponent 
+                          label=''
+                          latitude={this.state.latitude}
+                          longitude={this.state.longitude} />
+                    </Modal.Body>
+                </Modal>
+                <Panel 
+                  className='panel-fill'
+                  header='Customers' 
+                  bsStyle='primary'>
+                    <TabbedArea fill 
+                      animation={false}
+                      activeKey={this.state.key} 
+                      onSelect={this.handleSelect}>
+                        <TabPane 
+                          eventKey={1} 
+                          tab='All customers'>
+                            <Panel>
+                                <Griddle 
+                                  results={this.props.customers} 
+                                  showFilter={true}
+                                  resultsPerPage={this.props.resultsPerPage}
+                                  useGriddleStyles={false}
+                                  columnMetadata={metadata}
+                                  onRowClick={this.handleRowClick}
+                                  useCustomPagerComponent={true}
+                                  customPagerComponent={BootstrapPager}
+                                  tableClassName='table table-bordered table-select' 
+                                  columns={columns} />
+                            </Panel>
+                        </TabPane>
+                        <TabPane eventKey={2} tab="Register new customer">
+                            <CustomerRegistrationForm 
+                              ref='customerRegistrationForm'
+                              onNewRegistration={this.handleNewRegistration} />
+                        </TabPane>
+                        <TabPane eventKey={3} tab={pendingRegistrationsTab}>
+                            <PendingRegistrationsView 
+                              registrations={this.state.registrations} />
+                        </TabPane>
+                    </TabbedArea>
+                </Panel>
+            </div>
+        )
     }
-});
+})
 
-module.exports = CustomersView;
+module.exports = CustomersView

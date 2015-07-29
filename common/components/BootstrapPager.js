@@ -1,35 +1,33 @@
-var React      = require('react');
-var Bootstrap  = require('react-bootstrap');
-var Griddle    = require('griddle-react');
-var DataStore  = require('../store/DataStore');
+var React      = require('react')
+var Bootstrap  = require('react-bootstrap')
+var Griddle    = require('griddle-react')
+var DataStore  = require('../store/DataStore')
 
-var Panel      = Bootstrap.Panel;
-var Pagination = Bootstrap.Pagination;
+var Panel      = Bootstrap.Panel
+var Pagination = Bootstrap.Pagination
 
-var BootstrapPager = React.createClass({
+const BootstrapPager = React.createClass({
     getInitialState: function() {
         return {
-            activePage: 0
-        };
+            activePage: 1
+        }
     },
     getDefaultProps: function() {
         return {
             maxButtons: 10
-        };
+        }
     },
     handleSelect: function(event, selectedEvent) {
-        var page = selectedEvent.eventKey;
+        let page = selectedEvent.eventKey
         if (page > this.props.maxPage || !page)
-            return;
-        this.setState({
-            activePage: page
-        });
-        this.props.setPage(page-1);
+            return
+        this.setState({activePage: page})
+        this.props.setPage(page-1)
     },
     render: function() {
-        var maxPage = this.props.maxPage;
+        let maxPage = this.props.maxPage
         if (maxPage < 2) {
-            return <span />;
+            return <span />
         }
         return (
             <Pagination
@@ -41,8 +39,8 @@ var BootstrapPager = React.createClass({
               maxButtons={Math.min(this.props.maxButtons, maxPage)}
               activePage={this.state.activePage}
               onSelect={this.handleSelect} />
-        );
+        )
     }
-});
+})
 
-module.exports = BootstrapPager;
+module.exports = BootstrapPager

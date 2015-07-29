@@ -1,56 +1,62 @@
-var Bootstrap           = require('react-bootstrap');
-var Griddle             = require('griddle-react');
-var React               = require('react');
-var DateTimeField       = require('react-bootstrap-datetimepicker');
-var AppDispatcher       = require('../../dispatcher/AppDispatcher');
-var DataStore           = require('../../store/DataStore');
+var Bootstrap           = require('react-bootstrap')
+var DateTimeField       = require('react-bootstrap-datetimepicker')
+var Griddle             = require('griddle-react')
+var React               = require('react')
+var assign              = require('object-assign')
 
-var Panel               = Bootstrap.Panel;
-var Table               = Bootstrap.Table;
-var Modal               = Bootstrap.Modal;
-var Button              = Bootstrap.Button;
-var Input               = Bootstrap.Input;
+var AppDispatcher       = require('../../dispatcher/AppDispatcher')
+var DataStore           = require('../../store/DataStore')
+var FormElementMixin    = require('../FormElementMixin')
+var FormItemStore       = require('../../store/FormItemStore')
 
-var DescriptionInput = React.createClass({
+var Button              = Bootstrap.Button
+var Input               = Bootstrap.Input
+var Modal               = Bootstrap.Modal
+var Panel               = Bootstrap.Panel
+var Table               = Bootstrap.Table
+
+const DescriptionStore = assign({}, FormItemStore, {
+    validate: function() {
+        if (this.value.length) { 
+            this.state = 'success'
+            this.hint  = null
+        } else {
+            this.state = 'error'
+            this.hint = 'This value is required.'
+        }
+    }
+})
+
+AppDispatcher.register(payload => {
+    if ('complaint-form-description-assign' === payload.actionType) {
+        DescriptionStore.setValue(payload.value)
+    } else if ('complaint-form-reset' === payload.actionType) {
+        DescriptionStore.reset()
+    } else if ('complaint-form-refresh' === payload.actionType) {
+        DescriptionStore.refresh()
+    }
+})
+
+const DescriptionInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: DescriptionStore,
     getInitialState: function() {
         return {
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null,
-            length = newValue.length;
-        if (length) { 
-            validationState = 'success'; 
-        } else {
-            validationState = 'error'; 
-            hint = 'This value is required.';
+            value           : '',
+            validationState : null,
+            hint            : null
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        }); 
     },
-    reset: function() {
-        this.setState(this.getInitialState());
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'complaint-form-description-assign',
+            value      : value
+        })
     },
     render: function() {
         return (
             <Input
-              label='Name'
+              label='Description'
               ref='input'
               value={this.state.value}
               placeholder='A short description of the complaint'
@@ -59,32 +65,93 @@ var DescriptionInput = React.createClass({
               help={this.state.hint}
               onChange={this.handleChange}
               type='textarea' />
-        );
+        )
     }
-});
+})
 
-var ServiceComplaintRegistrationForm = React.createClass({
+const ProactiveStore = assign({}, FormItemStore)
+
+ProactiveStore.value = false
+
+AppDispatcher.register(payload => {
+    if ('complaint-form-proactive-assign' === payload.actionType) {
+        ProactiveStore.setValue(payload.proactive)
+    } else if ('complaint-form-reset' === payload.actionType) {
+        ProactiveStore.reset()
+    } else if ('complaint-form-refresh' === payload.actionType) {
+        ProactiveStore.refresh()
+    }
+})
+
+const ProactiveInput = React.createClass({
     getInitialState: function() {
-        return {
-            created: String(Date.now())
-        }
+        return {value: ProactiveStore.getValue()}
     },
+    updateValue: function() {
+        this.setState({value: ProactiveStore.getValue()})
+    },
+    componentDidMount: function() {
+        ProactiveStore.on('change', this.updateValue)
+    },
+    componentWillUnmount: function() {
+        ProactiveStore.removeListener('change', this.updateValue)
+    },
+    handleChange: function(event) {
+        this._update(event.target.value)
+    },
+    reset: function() {
+        this._update(false)
+    },
+    _update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'complaint-form-proactive-assign',
+            proactive  : value
+        })
+    },
+    render: function() {
+        return (
+            <Input
+              ref='proactive'
+              wrapperClassName='help-pull-right'
+              label='Proactive'
+              help='Check if call was made by the user.' 
+              type='checkbox' 
+              onChange={this.handleChange}
+              value={this.state.proactive} />
+        )
+    }
+})
+
+const ServiceComplaintRegistrationForm = React.createClass({
     handleSubmit: function() {
-        var isValid = this.refs.descriptionInput.isValid();
+        let isValid = !!DescriptionStore.isValid()
         if (!isValid) {
-            this.refs.descriptionInput.forceValidate();
+            AppDispatcher.dispatch({
+                actionType: 'complaint-form-refresh'
+            })
         } else {
-            var customerHref = this.props.customer['_links']['self'];
-            var complaint = {
-                'created'     : this.state.created,
-                'description' : this.refs.descriptionInput.state.value,
+            let complaint = {
+                'created'     : Date.now(),
+                'description' : DescriptionStore.getValue(),
                 'type'        : 'service',
+                'user'        : 'Demo user',
                 '_links'      : {
-                    'customer'    : customerHref,
-                    '_collection' : customerHref
+                    'customer'    : { href: this.props.customer.id },
+                    '_collection' : { href: this.props.customer.id }
                 }
-            };
-            DataStore.store.embed(complaint, 'customer');
+            }
+            DataStore.store.embed(complaint, 'customer')
+            let activity = {
+                'type'     : 'complaint-register',
+                'activity' : this.props.activityType,
+                'created'  : Date.now(),
+                '_links'   : {
+                    '_collection' : { href: this.props.customer.id }
+                }
+            }
+            if ('Customer call' === this.props.activityType) {
+                activity.proactive = !!ProactiveStore.getValue()
+            }
             AppDispatcher.dispatch({
                 actionType : 'customer-activity',
                 command    : {
@@ -92,40 +159,31 @@ var ServiceComplaintRegistrationForm = React.createClass({
                     resource   : 'complaints', 
                     payload    : complaint
                 },
-                activity   : {
-                    'type'     : 'complaint-register',
-                    'activity' : this.props.activityType,
-                    'created'  : Date.now(),
-                    '_links'   : {
-                        '_collection' : customerHref
-                    }
-                }
-            });
-            this.props.close();
+                activity   : activity
+            })
+            this.resetForm()
+            this.props.close()
         }
     },
-    onChange: function(time) {
-        this.setState({
-            created: time
-        });
+    resetForm: function() {
+        AppDispatcher.dispatch({
+            actionType: 'complaint-form-reset'
+        })
     },
     render: function() {
         return (
             <div>
-                <div className='form-group'>
-                    <label>Created</label>
-                    <DateTimeField 
-                      onChange={this.onChange}
-                      dateTime={this.state.created}
-                      ref='dateTimeInput' />
-                </div>
-                <DescriptionInput 
-                  ref='descriptionInput' />
+                <DescriptionInput ref='descriptionInput' />
+                {('Customer call' === this.props.activityType) ? (
+                    <ProactiveInput />
+                ) : <span />}
                 <hr />
                 <Bootstrap.ButtonGroup>
                     <Button
                       bsStyle='primary'
                       onClick={this.handleSubmit}>
+                        <Bootstrap.Glyphicon 
+                          glyph='ok' />
                         Save
                     </Button>
                     <Button
@@ -135,8 +193,8 @@ var ServiceComplaintRegistrationForm = React.createClass({
                     </Button>
                 </Bootstrap.ButtonGroup>
              </div>
-        );
+        )
     }
-});
+})
 
-module.exports = ServiceComplaintRegistrationForm;
+module.exports = ServiceComplaintRegistrationForm

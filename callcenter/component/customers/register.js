@@ -297,13 +297,17 @@ var CustomerRegistrationForm = React.createClass({
                 area          : this.refs.customerArea.state.value,
                 priceCategory : this.refs.customerPriceCategory.state.value
             };
-            AppDispatcher.dispatch({
-                actionType   : 'command-invoke',
-                command      : {
-                    method   : 'POST',
-                    resource : 'registrations',
-                    payload  : customer
+            var task = {
+                'description' : "Attend to registration for customer '" + customer.name + "'.",
+                'created'     : Date.now(),
+                '_links'      : {
+                    '_collection' : { href: customer.id }
                 }
+            };
+            AppDispatcher.dispatch({
+                actionType    : 'customer-partial-registration',
+                customer      : customer,
+                task          : task
             });
             this.resetForm();
         }

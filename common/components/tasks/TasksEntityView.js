@@ -1,43 +1,39 @@
-var Bootstrap                        = require('react-bootstrap');
-var Griddle                          = require('griddle-react');
-var React                            = require('react');
-var TimeAgo                          = require('react-timeago');
-var AppDispatcher                    = require('../../dispatcher/AppDispatcher');
-var DataStore                        = require('../../store/DataStore');
-var ConfirmCloseTaskModal            = require('./ConfirmCloseTaskModal');
+import Bootstrap              from 'react-bootstrap'
+import Griddle                from 'griddle-react'
+import React                  from 'react'
+import TimeAgo                from 'react-timeago'
 
-var Button                           = Bootstrap.Button;
-var Modal                            = Bootstrap.Modal;
-var Panel                            = Bootstrap.Panel;
-var TabPane                          = Bootstrap.TabPane;
-var TabbedArea                       = Bootstrap.TabbedArea;
-var Table                            = Bootstrap.Table;
+import AppDispatcher          from '../../dispatcher/AppDispatcher'
+import ConfirmCloseTaskModal  from './ConfirmCloseTaskModal'
+import DataStore              from '../../store/DataStore'
+import TaskDueComponent       from './TasksDueComponent'
 
-var TasksEntityView = React.createClass({
+import {Button, Modal, Panel, TabPane, TabbedArea, Table} from 'react-bootstrap'
+
+const TasksEntityView = React.createClass({
     getInitialState: function() {
         return {
-            modalVisible: false
-        };
+            modalVisible : false
+        }
     },
     confirmCloseTask: function() {
-        this.setState({modalVisible: true});
+        this.setState({modalVisible: true})
     },
     closeModal: function() {
-        this.setState({modalVisible: false});
+        this.setState({modalVisible: false})
     },
     render: function() {
-        var task = this.props.task;
+        let task = this.props.task
         if (!task) {
-            return <span>Error: Invalid or missing record.</span>;
+            return <span>Error: Invalid or missing record.</span>
         }
-        var date = new Date(Number(task.due));
-        var taskHref = task['_links']['self'].href;
+        let date = new Date(Number(task.due))
         return (
             <div>
                 <ConfirmCloseTaskModal
-                  show={this.state.modalVisible}
-                  taskId={taskHref}
-                  close={this.closeModal} />
+                  show   = {this.state.modalVisible}
+                  taskId = {task.id}
+                  close  = {this.closeModal} />
                 <Table striped bordered fill>
                     <col width={130} />
                     <col />
@@ -46,13 +42,15 @@ var TasksEntityView = React.createClass({
                             <td><b>Created</b></td>
                             <td>
                                 <TimeAgo 
-                                  date={Number(task.created)} 
-                                  formatter={DataStore.timeFormatter} />
+                                  date      = {Number(task.created)}
+                                  formatter = {DataStore.timeFormatter} />
                             </td>
                         </tr>
                         <tr>
                             <td><b>Due</b></td>
-                            <td><span>{date.toDateString()}</span></td>
+                            <td>
+                                <TaskDueComponent rowData={{due: task.due}} />
+                            </td>
                         </tr>
                         <tr>
                             <td><b>Description</b></td>
@@ -62,20 +60,22 @@ var TasksEntityView = React.createClass({
                     <tfoot>
                         <tr>
                             <td colSpan={2}>
-                                <Button 
-                                  onClick={this.confirmCloseTask} 
-                                  block>
-                                    <Bootstrap.Glyphicon
-                                      glyph='ok' />
-                                    Close
-                                </Button>
                             </td>
                         </tr>
                     </tfoot>
                 </Table>
+                <div>
+                    <Button 
+                      onClick={this.confirmCloseTask} 
+                      block>
+                        <Bootstrap.Glyphicon
+                          glyph='ok' />
+                        Close
+                    </Button>
+                </div>
             </div>
-        );
+        )
     }
-});
- 
-module.exports = TasksEntityView;
+})
+
+module.exports = TasksEntityView

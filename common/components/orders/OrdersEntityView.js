@@ -1,62 +1,30 @@
-var Bootstrap                        = require('react-bootstrap');
-var Griddle                          = require('griddle-react');
-var React                            = require('react');
-var TimeAgo                          = require('react-timeago');
-var DataStore                        = require('../../store/DataStore');
+import Bootstrap                        from 'react-bootstrap'
+import Griddle                          from 'griddle-react'
+import React                            from 'react'
+import TimeAgo                          from 'react-timeago'
+import DataStore                        from '../../store/DataStore'
 
-var Modal                            = Bootstrap.Modal;
-var Panel                            = Bootstrap.Panel;
-var TabPane                          = Bootstrap.TabPane;
-var TabbedArea                       = Bootstrap.TabbedArea;
-var Table                            = Bootstrap.Table;
+import {Modal, Panel, TabPane, TabbedArea, Table} from 'react-bootstrap'
 
-var OrdersEntityView = React.createClass({
+const OrdersEntityView = React.createClass({
     render: function() {
-        var order = this.props.order;
-        if (!order) {
-            return <span>Error: Invalid or missing record.</span>;
+        let order = this.props.order
+        if (!order || !order.items) {
+            return (
+                <span>Error: Invalid or missing record.</span>
+            )
         }
-        var products = <span />,
-            i = 0;
-        if (order.products) {
-            var items = 
-                order.products.map(function(item) {
-                    return (
-                        <tr key={i++}>
-                            <td>{item.productName}</td>
-                            <td>{item.quantity}</td>
-                            <td>{item.price}</td>
-                        </tr>
-                    );
-                });
-            if (items.length) {
-                products = (
-                    <div>
-                        <h4>Products</h4>
-                        <Table striped bordered fill>
-                            <thead>
-                                <th>Product</th>
-                                <th>Quantity</th>
-                                <th>Price</th>
-                            </thead>
-                            <tbody>
-                                {items}
-                            </tbody>
-                            <tfoot>
-                                <tr>
-                                    <td colSpan={2}>
-                                        <b>Order total:</b>
-                                    </td>
-                                    <td>
-                                        {order.total}
-                                    </td>
-                                </tr>
-                            </tfoot>
-                        </Table>
-                    </div>
-                );
-            }
-        }
+        let i = 0
+        let items = order.items.map(item => {
+            return (
+                <tr key={i++}>
+                    <td>{item.product.name}</td>
+                    <td>{item.quantity}</td>
+                    <td>{item.itemPrice}</td>
+                    <td>{item.price}</td>
+                </tr>
+            )
+        })
         return (
             <div>
                 <Table striped bordered fill>
@@ -71,16 +39,36 @@ var OrdersEntityView = React.createClass({
                             <td><b>Created</b></td>
                             <td>
                                 <TimeAgo 
-                                  date={Number(order.created)} 
-                                  formatter={DataStore.timeFormatter} />
+                                  date      = {Number(order.created)} 
+                                  formatter = {DataStore.timeFormatter} />
                             </td>
                         </tr>
                     </tbody>
                 </Table>
-                {products}
+                <Table striped bordered fill>
+                    <thead>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Item price</th>
+                        <th>Price</th>
+                    </thead>
+                    <tbody>
+                        {items}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colSpan={3}>
+                                <b>Order total:</b>
+                            </td>
+                            <td>
+                                {order.total}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </Table>
             </div>
-        );
+        )
     }
-});
+})
  
-module.exports = OrdersEntityView;
+module.exports = OrdersEntityView

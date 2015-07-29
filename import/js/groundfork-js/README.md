@@ -109,6 +109,19 @@ var api = new GroundFork.Api(config);
 | onBatchJobComplete  |           |           | function |   |
 | interval            | 15        |           | number   | A timeout interval used to avoid busy looping during sync batch jobs. |
 
+##### Overriding route patterns
+
+```
+var api = new GroundFork.Api({
+    storage  : store,
+    patterns : {
+        'POST/recipes': function() {
+            // save recipe
+        }
+    },
+});
+```
+
 ### Methods
 
 #### command (request)
@@ -167,9 +180,9 @@ var endpoint = new GroundFork.BasicHttpEndpoint(config);
 | clientSecret        |                         | required  | string    |   |
 | onRequestStart      |                         |           | function  |   |
 | onRequestComplete   |                         |           | function  |   |
-| syncSuffix          | 'sync'                  |           | string    |   |
-| url                 | 'http://localhost:3333' |           | string    |   |
-| requestHandler      | `BasicHttpEndpoint.ajaxRequestHandler` |           | function  | See below. | 
+| syncSuffix          | `'sync'`                  |           | string    |   |
+| url                 | `'http://localhost:3333'` |           | string    |   |
+| requestHandler      | `ajaxRequestHandler` |           | function  | See below. | 
 
 ### Request handler
 

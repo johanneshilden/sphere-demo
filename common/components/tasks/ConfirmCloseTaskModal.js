@@ -1,17 +1,13 @@
-var Bootstrap                        = require('react-bootstrap');
-var React                            = require('react');
-var TimeAgo                          = require('react-timeago');
-var AppDispatcher                    = require('../../dispatcher/AppDispatcher');
-var DataStore                        = require('../../store/DataStore');
+import Bootstrap       from 'react-bootstrap'
+import React           from 'react'
+import TimeAgo         from 'react-timeago'
 
-var Button                           = Bootstrap.Button;
-var Modal                            = Bootstrap.Modal;
-var Panel                            = Bootstrap.Panel;
-var TabPane                          = Bootstrap.TabPane;
-var TabbedArea                       = Bootstrap.TabbedArea;
-var Table                            = Bootstrap.Table;
+import AppDispatcher   from '../../dispatcher/AppDispatcher'
+import DataStore       from '../../store/DataStore'
 
-var ConfirmCloseTaskModal = React.createClass({
+import {Button, Modal, Panel, TabPane, TabbedArea, Table} from 'react-bootstrap'
+
+const ConfirmCloseTaskModal = React.createClass({
     confirmAction: function() {
         AppDispatcher.dispatch({
             actionType : 'command-invoke',
@@ -23,8 +19,8 @@ var ConfirmCloseTaskModal = React.createClass({
                 message : 'The task has been closed.',
                 level   : 'success'
             }
-        });
-        this.props.close();
+        })
+        this.props.close()
     },
     render: function() {
         return (
@@ -45,12 +41,14 @@ var ConfirmCloseTaskModal = React.createClass({
                     <Button 
                       bsStyle='danger' 
                       onClick={this.confirmAction}>
+                        <Bootstrap.Glyphicon 
+                          glyph='ok' />
                         Close task
                     </Button>
                 </Modal.Footer>
             </Modal>
-        );
+        )
     }
-});
+})
 
-module.exports = ConfirmCloseTaskModal;
+module.exports = ConfirmCloseTaskModal

@@ -1,29 +1,33 @@
-var React                = require('react');
-var Router               = require('react-router');
-var Bootstrap            = require('react-bootstrap');
-var NotificationSystem   = require('react-notification-system');
-var ComplaintsView       = require('../../common/components/complaints/ComplaintsView');
-var ComplaintsEntityView = require('../../common/components/complaints/ComplaintsEntityView');
-var CustomersView        = require('../../common/components/customers/CustomersView');
-var CustomersEntityView  = require('../../common/components/customers/CustomersEntityView');
-var DataStore            = require('../../common/store/DataStore');
-var GroundFork           = require('../../common/js/groundfork-js/groundfork');
-var OrdersEntityView     = require('../../common/components/orders/OrdersEntityView');
-var OrdersView           = require('../../common/components/orders/OrdersView');
-var PerformanceView      = require('../../common/components/performance/PerformanceView');
-var ProductsView         = require('../../common/components/products/ProductsView');
-var ProductsEntityView   = require('../../common/components/products/ProductsEntityView');
-var StockView            = require('../../common/components/stock/StockView');
-var SyncComponent        = require('../../common/components/SyncComponent');
-var TasksEntityView      = require('../../common/components/tasks/TasksEntityView');
-var TasksView            = require('../../common/components/tasks/TasksView');
+var React                 = require('react')
+var Router                = require('react-router')
+var Bootstrap             = require('react-bootstrap')
+var assign                = require('object-assign')
+var EventEmitter          = require('events')
 
-var Route                = Router.Route;
-var RouteHandler         = Router.RouteHandler;
+var AppDispatcher         = require('../../common/dispatcher/AppDispatcher')
+var ComplaintsView        = require('../../common/components/complaints/ComplaintsView')
+var ComplaintsEntityView  = require('../../common/components/complaints/ComplaintsEntityView')
+var CustomersView         = require('../../common/components/customers/CustomersView')
+var CustomersEntityView   = require('../../common/components/customers/CustomersEntityView')
+var DataStore             = require('../../common/store/DataStore')
+var GroundFork            = require('../../common/js/groundfork-js/groundfork')
+var OrdersEntityView      = require('../../common/components/orders/OrdersEntityView')
+var OrdersView            = require('../../common/components/orders/OrdersView')
+var PerformanceView       = require('../../common/components/performance/PerformanceView')
+var ProductsView          = require('../../common/components/products/ProductsView')
+var ProductsEntityView    = require('../../common/components/products/ProductsEntityView')
+var StockView             = require('../../common/components/stock/StockView')
+var SyncComponent         = require('../../common/components/SyncComponent')
+var TasksEntityView       = require('../../common/components/tasks/TasksEntityView')
+var TasksView             = require('../../common/components/tasks/TasksView')
+var NotificationComponent = require('../../common/components/NotificationComponent')
+
+var Route                 = Router.Route
+var RouteHandler          = Router.RouteHandler
 
 var store = new GroundFork.BrowserStorage({
     namespace : 'sphere.fieldstaff'
-});
+})
 
 var api = new GroundFork.Api({
     storage            : store,
@@ -35,109 +39,188 @@ var api = new GroundFork.Api({
         'PATCH/stock/:id': function(context, request) {
             var key = 'stock/' + context.id,
                 item = store.getItem(key),
-                reverse = {};
+                reverse = {}
             if (item) {
                 var adjustAvailable = Number(request.payload.adjustAvailable),
-                    adjustActual    = Number(request.payload.adjustActual);
+                    adjustActual    = Number(request.payload.adjustActual)
                 if (adjustAvailable) {
-                    item.available += adjustAvailable;
-                    reverse.adjustAvailable = -adjustAvailable;
+                    item.available += adjustAvailable
+                    reverse.adjustAvailable = -adjustAvailable
                 }
                 if (adjustActual) {
-                    item.actual += adjustActual;
-                    reverse.adjustActual = -adjustActual;
+                    item.actual += adjustActual
+                    reverse.adjustActual = -adjustActual
                 }
-                store.insertItem(key, item);
+                store.insertItem(key, item)
                 if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('_parent')) {
-                    var product = item['_links']['_parent'].href;
+                    var product = item['_links']['_parent'].href
                     store.updateCollectionWith(product, function(collection) {
                         if (!collection.hasOwnProperty('_links')) 
-                            collection['_links'] = {};
+                            collection['_links'] = {}
                         collection['_links']['stock'] = {
                             'href': key
-                        };
+                        }
                         if (!collection.hasOwnProperty('_embedded')) 
-                            collection['_embedded'] = {};
-                        var _item = {};
+                            collection['_embedded'] = {}
+                        var _item = {}
                         for (var key in item) {
                             if ('_embedded' !== key) 
-                                _item[key] = item[key];
+                                _item[key] = item[key]
                         }
-                        collection['_embedded']['stock'] = _item;
-                    });
+                        collection['_embedded']['stock'] = _item
+                    })
                 }
             }
             return {
                 "status" : 'success',
                 "data"   : reverse
-            };
+            }
         },
         'POST/orders': function(context, request) {
-            var orderItems = request.payload['_embedded'].items;
+            let orderItems = request.payload.items
             if (!orderItems || !orderItems.length)
-                return;
-            for (var i = 0; i < orderItems.length; i++) {
-                var item = orderItems[i];
-                if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('product')) {
-                    var productHref = item['_links']['product'].href;
-                    var product = DataStore.getItem(productHref),
-                        stock = null;
-                    if (product && (stock = product.getLink('stock'))) {
-                        api.patch(stock, { 
-                            adjustAvailable: -Number(item.quantity)
-                        });
-                        var orderHref = request.payload['_links']['self'];
-                        api.post('stock-movements', {
-                            'action'   : 'Order created.',
-                            'type'     : 'available',
-                            'quantity' : -Number(item.quantity),
-                            '_links'   : {
-                                'order'   : orderHref,
-                                'stock'   : { 'href' : stock },
-                                'product' : { 'href' : productHref }
-                            }
-                        });
-                    }
+                return
+            var stock, product
+            orderItems.forEach(item => {
+                product = DataStore.getItem(item['_links']['product'].href)
+                if (product && (stock = product.getLink('stock'))) {
+                    api.patch(stock, { 
+                        adjustAvailable: -Number(item.quantity)
+                    })
+                    api.post('stock-movements', {
+                        'action'   : 'Order created.',
+                        'type'     : 'available',
+                        'created'  : Date.now(),
+                        'quantity' : -Number(item.quantity),
+                        '_links'   : {
+                            'order'   : request.payload['_links']['self'],
+                            'stock'   : { 'href' : stock },
+                            'product' : { 'href' : product.id }
+                        }
+                    })
                 }
-            }
+            })
         }
     }
-});
+})
 
 var endpoint = new GroundFork.BasicHttpEndpoint({
     api               : api,
     url               : 'http://agile-oasis-7393.herokuapp.com/',
-    //url               : 'http://localhost:3333/',
+   //url    : 'http://localhost:3333/',
     clientKey         : 'fieldstaff-user1',
     clientSecret      : 'fieldstaff',
     onRequestStart    : function() {},
     onRequestComplete : function() {}
-});
+})
 
-DataStore.api = api;
-DataStore.store = store;
-DataStore.endpoint = endpoint;
+DataStore.api = api
+DataStore.store = store
+DataStore.endpoint = endpoint
 
-var App = React.createClass({
-    handlePressSync: function() {
-        DataStore.emit('sync-run');
+const SyncStatusStore = assign ({}, EventEmitter.prototype, {
+    inSync: false,
+    setSyncStatus: function(newStatus) {
+        if (newStatus !== this.inSync) {
+            this.inSync = newStatus
+            this.emit('change')
+        }
+    }
+})
+
+AppDispatcher.register(function(payload) {
+    if (payload.actionType === 'sync-status-update') {
+        SyncStatusStore.setSyncStatus(payload.inSync)
+    }
+})
+
+const App = React.createClass({
+    timer: null,
+    getInitialState: function() {
+        return {
+            taskCount : 0,
+            inSync    : false
+        }
+    },
+    countTasks: function() {
+        let tasks = DataStore.fetchCollection('tasks')
+        this.setState({
+            taskCount : tasks.length
+        })
+    },
+    componentDidMount: function() {
+        this.countTasks()
+        this.checkSyncStatus()
+        DataStore.on('change', this.countTasks)
+        DataStore.on('sync-complete', this.checkSyncStatus)
+        SyncStatusStore.on('change', this.updateSyncStatus)
+        this.timer = setInterval(() => {this.checkSyncStatus()}, 5000)
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.countTasks)
+        DataStore.removeListener('sync-complete', this.checkSyncStatus)
+        SyncStatusStore.removeListener('change', this.updateSyncStatus)
+        if (this.timer) {
+            clearInterval(this.timer)
+        }
+    },
+    checkSyncStatus: function() {
+        if (navigator && !navigator.onLine)
+            return
+        endpoint.syncPoint((response) => {
+            if (!response || !response.syncPoint)
+                return
+            console.log(response)
+            let inSync = response.syncPoint == api.syncPoint()
+            AppDispatcher.dispatch({
+                actionType : 'sync-status-update',
+                inSync     : inSync
+            })
+        })
+    },
+    updateSyncStatus: function() {
+        if (this.state.inSync !== SyncStatusStore.inSync) {
+            this.setState({inSync: SyncStatusStore.inSync})
+        }
+    },
+    runSync: function() {
+        DataStore.emit('sync-run')
     },
     render: function() {
+        let badge = this.state.taskCount ? (
+            <Bootstrap.Badge pullRight={true}>
+                {this.state.taskCount}
+            </Bootstrap.Badge>
+        ) : (
+            <span />
+        )
+//                    <Bootstrap.Button
+//                      bsSize='small'
+//                      bsStyle='default'
+//                      className='btn-sync'
+//                      onClick={this.handlePressSync}>
+//                        <span 
+//                          className='glyphicon glyphicon-cloud-download' 
+//                          aria-hidden='true' />
+//                        Sync
+//                    </Bootstrap.Button>
+//                            <li>
+//                                <span className='nav-label'>Field staff</span>
+//                            </li>
+
+//<Bootstrap.OverlayTrigger placement='bottom' overlay={tooltip}>
+//                                    </Bootstrap.OverlayTrigger>
+
+        let tooltip = (
+            <Bootstrap.Tooltip>
+                Some resources have changed on other devices.
+            </Bootstrap.Tooltip>
+        )
         return (
             <div id='wrapper'>
                 <nav 
                   className='navbar navbar-inverse navbar-fixed-top' 
                   role='navigation'>
-                    <Bootstrap.Button
-                      bsSize='small'
-                      bsStyle='default'
-                      className='btn-sync'
-                      onClick={this.handlePressSync}>
-                        <span 
-                          className='glyphicon glyphicon-cloud-download' 
-                          aria-hidden='true' />
-                        Sync
-                    </Bootstrap.Button>
                     <div className='navbar-header'>
                         <button type='button' className='navbar-toggle' data-toggle='collapse' data-target='.nav-collapse'>
                             <span className='sr-only'>Toggle navigation</span>
@@ -149,39 +232,58 @@ var App = React.createClass({
                             <img src='../common/images/sphere-logo.png' alt='' />
                         </a>
                     </div>
+                    <ul className='nav navbar-right top-nav'>
+                        <li className='nav-sync-btn'>
+                            {!this.state.inSync ? (
+                                <Bootstrap.OverlayTrigger 
+                                  placement='bottom' 
+                                  overlay={tooltip}>
+                                    <a className='badge-indicator' href='javascript:;' onClick={this.runSync}>
+                                        <Bootstrap.Glyphicon 
+                                          glyph='exclamation-sign' />
+                                    </a>
+                                </Bootstrap.OverlayTrigger>
+                            ) : (
+                                <span />
+                            )}
+                            <a href='javascript:;' onClick={this.runSync}>
+                                <Bootstrap.Glyphicon 
+                                  style={{fontSize: '130%', marginTop: '-.1em'}}
+                                  glyph='refresh' />
+                            </a>
+                         </li>
+                    </ul>
                     <div className='collapse navbar-collapse nav-collapse'>
                         <ul className='nav navbar-nav side-nav'>
                             <li>
-                                <span className='nav-label'>Field staff</span>
-                            </li>
-                            <li>
                                 <a href='#customers'>
-                                    <i className='fa fa-fw fa-user'></i>Customers
+                                    Customers
                                 </a>
                             </li>
                             <li>
                                 <a href='#complaints'>
-                                    <i className='fa fa-fw fa-ticket'></i>Complaints
+                                    Complaints
                                 </a>
                             </li>
                             <li>
                                 <a href='#orders'>
-                                    <i className='fa fa-fw fa-line-chart'></i>Orders
+                                    Orders
                                 </a>
                             </li>
                             <li>
                                 <a href='#products'>
-                                    <i className='fa fa-fw fa-barcode'></i>Products
+                                    Products
                                 </a>
                             </li>
                             <li>
                                 <a href='#stock'>
-                                    <i className='fa fa-fw fa-cubes'></i>Stock
+                                    Stock
                                 </a>
                             </li>
                             <li>
                                 <a href='#tasks'>
-                                    <i className='fa fa-fw fa-thumb-tack'></i>Tasks
+                                    Tasks
+                                    {badge}
                                 </a>
                             </li>
                         </ul>
@@ -194,9 +296,9 @@ var App = React.createClass({
                     </div>
                 </div>
             </div>
-        );
+        )
     }
-});
+})
 
 //                            <li>
 //                                <a href='#performance'>
@@ -204,27 +306,43 @@ var App = React.createClass({
 //                                </a>
 //                            </li>
 
-var OrdersItemRoute = React.createClass({
+const OrdersItemRoute = React.createClass({
     getInitialState: function() {
         return {
-            order: null
-        };
+            order    : null,
+            customer : null
+        }
     },
     fetchOrder: function() {
-        var order = DataStore.getItem('orders/' + this.props.params.id);
-        if (order && order.hasOwnProperty('_embedded')) {
-            order.products = order['_embedded']['items'];
+        let order = DataStore.getItem('orders/' + this.props.params.id)
+        if (order) {
+            order.items.forEach(item => {
+                item.product = item['_embedded']['product']
+            })
+            let customer = order.getEmbedded('customer')
+            if (customer) {
+                order.customer = customer
+                customer.id = customer['_links']['self'].href
+            }
+            this.setState({
+                order    : order,
+                customer : customer
+            })
         }
-        this.setState({order: order});
     },
     componentDidMount: function() {
-        this.fetchOrder();
-        DataStore.on('change', this.fetchOrder);
+        this.fetchOrder()
+        DataStore.on('change', this.fetchOrder)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchOrder);
+        DataStore.removeListener('change', this.fetchOrder)
     },
     render: function() {
+        if (!this.state.order || !this.state.customer)
+            return (
+                <span />
+            )
+        let customer = this.state.customer
         return (
             <div>
                 <Bootstrap.Panel 
@@ -232,82 +350,93 @@ var OrdersItemRoute = React.createClass({
                   bsStyle='primary'>
                     <ol className='breadcrumb'>
                         <li>
-                            <a href='#orders'>
-                                Orders
+                            <a href='#/customers'>
+                                Customers
+                            </a>
+                        </li>
+                        <li>
+                            <a href={'#/' + customer.id}>
+                                {customer.name}
                             </a>
                         </li>
                         <li className='active'>
                             View order
                         </li>
                     </ol>
-                    <OrdersEntityView 
-                      order={this.state.order} />
+                    <OrdersEntityView order={this.state.order} />
                 </Bootstrap.Panel>
             </div>
         )
     }
-});
+})
 
-var OrdersRoute = React.createClass({
+const OrdersRoute = React.createClass({
     fetchOrders: function() {
-        var data = DataStore.fetchCollection('orders');
-        this.setState({data: data});
+        var orders = DataStore.fetchCollection('orders')
+        this.setState({orders: orders})
     },
     getInitialState: function() {
         return {
-            data: []
-        };
+            orders : []
+        }
     },
     componentDidMount: function() {
-        this.fetchOrders();
-        DataStore.on('change', this.fetchOrders);
+        this.fetchOrders()
+        DataStore.on('change', this.fetchOrders)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchOrders);
+        DataStore.removeListener('change', this.fetchOrders)
     },
-
     render: function() {
         return (
             <Bootstrap.Panel 
               className='panel-fill'
               bsStyle='primary'  
               header='Orders'>
-                <OrdersView 
-                  orders={this.state.data} />
+                <OrdersView orders={this.state.orders} />
             </Bootstrap.Panel>
         )
     }
-});
+})
 
-var StockRoute = React.createClass({
+const StockItemRoute = React.createClass({
+    render: function() {
+        return (
+            <ProductsEntityView 
+              productId={this.props.params.id} 
+              parentResource='Stock' />
+        )
+    }
+})
+
+const StockRoute = React.createClass({
     fetchStock: function() {
-        var stock = DataStore.fetchCollection('stock');
-        for (var i = 0; i < stock.length; i++) {
-            DataStore.store.embed(stock[i], 'product');
+        let embedProduct = (item) => {
+            item.embed('product')
+            item.product = item.getEmbedded('product')
+            item.productName = item.product.name
         }
-        var activity = DataStore.fetchCollection('stock-movements');
-        for (var i = 0; i < activity.length; i++) {
-            DataStore.store.embed(activity[i], 'product');
-            if (activity[i].hasOwnProperty('_embedded') && activity[i]['_embedded'].hasOwnProperty('product'))
-                activity[i].productName = activity[i]['_embedded']['product'].name;
-        }
+        let stock = DataStore.fetchCollection('stock')
+        stock.forEach(embedProduct)
+        let activity = DataStore.fetchCollection('stock-movements')
+        activity.forEach(embedProduct)
         this.setState({
             stock    : stock,
             activity : activity
-        });
+        })
     },
     getInitialState: function() {
         return {
             data     : [],
             activity : []
-        };
+        }
     },
     componentDidMount: function() {
-        this.fetchStock();
-        DataStore.on('change', this.fetchStock);
+        this.fetchStock()
+        DataStore.on('change', this.fetchStock)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchStock);
+        DataStore.removeListener('change', this.fetchStock)
     },
     render: function() {
         return (
@@ -316,113 +445,143 @@ var StockRoute = React.createClass({
               activity={this.state.activity} />
         )
     }
-});
+})
 
-var CustomersRoute = React.createClass({
+const CustomersRoute = React.createClass({
     fetchCustomers: function() {
-        var data = DataStore.fetchCollection('customers');
-        for (var i = 0; i < data.length; i++) {
-            data[i].href = data[i]['_links']['self'].href;
-        }
-        this.setState({data: data});
+        let data = DataStore.fetchCollection('customers')
+        this.setState({data: data})
     },
     getInitialState: function() {
         return {
             data: []
-        };
+        }
     },
     componentDidMount: function() {
-        this.fetchCustomers();
-        DataStore.on('change', this.fetchCustomers);
+        this.fetchCustomers()
+        DataStore.on('change', this.fetchCustomers)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchCustomers);
+        DataStore.removeListener('change', this.fetchCustomers)
     },
     render: function() {
         return (
-            <CustomersView 
-              customers={this.state.data} />
+            <CustomersView customers={this.state.data} />
         )
     }
-});
+})
 
-var RegistrationsRoute = React.createClass({
-    render: function() {
-        return (
-            <span>Hello</span>
-        )
-    }
-});
-
-var CustomersItemRoute = React.createClass({
+const CustomersItemRoute = React.createClass({
+    getInitialState: function() {
+        return {
+            customer : null
+        }
+    },
+    fetchCustomer: function() {
+        let customer = DataStore.getItem('customers/' + this.props.params.id)
+        if (customer) {
+            let activities = customer.getEmbedded('activities') || [],
+                orders     = customer.getEmbedded('orders')     || [],
+                complaints = customer.getEmbedded('complaints') || [],
+                tasks      = customer.getEmbedded('tasks')      || []
+            this.setState({
+                customer   : customer,
+                activities : activities.map(item => {
+                    item.resource = item.getLink('resource')
+                    return item
+                }),
+                orders     : orders.map(order => {
+                    order.id = order['_links']['self'].href
+                    return order
+                }),
+                contacts   : customer.getEmbedded('contacts')   || [],
+                complaints : complaints.map(complaint => {
+                    complaint.id = complaint['_links']['self'].href
+                    return complaint
+                }),
+                tasks      : tasks.map(task => {
+                    task.id = task['_links']['self'].href
+                    return task
+                })
+            })
+        }
+    },
+    componentDidMount: function() {
+        this.fetchCustomer()
+        DataStore.on('change', this.fetchCustomer)
+    },
+    componentWillUnmount: function() {
+        DataStore.removeListener('change', this.fetchCustomer)
+    },
     render: function() {
         return (
             <CustomersEntityView 
-              customerId={this.props.params.id} />
+              customer   = {this.state.customer}
+              orders     = {this.state.orders}
+              contacts   = {this.state.contacts}
+              complaints = {this.state.complaints}
+              tasks      = {this.state.tasks}
+              activities = {this.state.activities} />
         )
     }
-});
+})
 
-var ComplaintsRoute = React.createClass({
+const ComplaintsRoute = React.createClass({
     getInitialState: function() {
         return {
-            data: []
-        };
+            complaints : []
+        }
     },
     fetchComplaints: function() {
-        var data = DataStore.fetchCollection('complaints');
-        for (var i = 0; i < data.length; i++) {
-            var item = data[i];
-            DataStore.store.embed(item, 'customer');
-            data[i].customer = item['_embedded']['customer'];
-        }
-        this.setState({data: data});
+        let complaints = DataStore.fetchCollection('complaints')
+        complaints.forEach(item => {
+            item.customer = item.getEmbedded('customer')
+        })
+        this.setState({complaints: complaints})
     },
     componentDidMount: function() {
-        this.fetchComplaints();
-        DataStore.on('change', this.fetchComplaints);
+        this.fetchComplaints()
+        DataStore.on('change', this.fetchComplaints)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchComplaints);
+        DataStore.removeListener('change', this.fetchComplaints)
     },
     render: function() {
         return (
             <Bootstrap.Panel 
               header='Complaints'
               bsStyle='primary'>
-                <ComplaintsView complaints={this.state.data} />
+                <ComplaintsView 
+                  complaints={this.state.complaints} />
             </Bootstrap.Panel>
-        );
+        )
     }
-});
- 
-var ComplaintsItemRoute = React.createClass({
+})
+
+const ComplaintsItemRoute = React.createClass({
     getInitialState: function() {
         return {
-            complaint: null
-        };
+            complaint : null
+        }
     },
     fetchComplaint: function() {
-        var complaint = DataStore.getItem('complaints/' + this.props.params.id);
-        if (complaint && complaint.hasOwnProperty('_embedded')) {
-            if (complaint['_embedded'].hasOwnProperty('items')) {
-                for (var i = 0; i < complaint['_embedded']['items'].length; i++) {
-                    var item = complaint['_embedded']['items'][i];
-                    DataStore.store.embed(item, 'product');
-                    item.product = item['_embedded']['product'];
-                }
+        let complaint = DataStore.getItem('complaints/' + this.props.params.id)
+        if (complaint) {
+            if (complaint.items) {
+                complaint.items.forEach(item => {
+                    item.product = item['_embedded']['product']
+                })
             }
-            complaint.products = complaint['_embedded']['items'];
-            complaint.customer = complaint['_embedded']['customer'];
+            complaint.customer = complaint.getEmbedded('customer')
         }
-        this.setState({complaint: complaint});
+        this.setState({complaint: complaint})
     },
     componentDidMount: function() {
-        this.fetchComplaint();
-        DataStore.on('change', this.fetchComplaint);
+        this.fetchComplaint()
+        DataStore.on('change', this.fetchComplaint)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchComplaint);
+        DataStore.removeListener('change', this.fetchComplaint)
     },
     render: function() {
         return (
@@ -446,32 +605,30 @@ var ComplaintsItemRoute = React.createClass({
             </div>
         )
     }
-});
+})
 
-var ContactsItemRoute = React.createClass({
+const ContactsItemRoute = React.createClass({
     getInitialState: function() {
         return {
-            contact: null
-        };
+            contact : null
+        }
     },
     fetchContact: function() {
-        var contact = DataStore.getItem('contacts/' + this.props.params.id);
-        if (contact && contact.hasOwnProperty('_embedded')) {
-            contact.customer = contact['_embedded']['customer'];
-        }
-        this.setState({contact: contact});
+        var contact = DataStore.getItem('contacts/' + this.props.params.id)
+        contact.customer = contact.getEmbedded('customer')
+        this.setState({contact: contact})
     },
     componentDidMount: function() {
-        this.fetchContact();
-        DataStore.on('change', this.fetchContact);
+        this.fetchContact()
+        DataStore.on('change', this.fetchContact)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchContact);
+        DataStore.removeListener('change', this.fetchContact)
     },
     render: function() {
-        var contact = this.state.contact;
+        let contact = this.state.contact
         if (!contact)
-            return <span />;
+            return <span />
         return (
             <Bootstrap.Panel 
               header='Contacts'
@@ -510,24 +667,28 @@ var ContactsItemRoute = React.createClass({
             </Bootstrap.Panel>
         )
     }
-});
+})
 
-var TasksItemRoute = React.createClass({
+const TasksItemRoute = React.createClass({
     getInitialState: function() {
         return {
-            task: null
-        };
+            task : null
+        }
     },
     fetchTask: function() {
-        var task = DataStore.getItem('tasks/' + this.props.params.id);
-        this.setState({task: task});
+        var task = DataStore.getItem('tasks/' + this.props.params.id)
+        if (task) {
+            this.setState({task: task})
+        } else {
+            window.location.hash = '#/tasks'
+        }
     },
     componentDidMount: function() {
-        this.fetchTask();
-        DataStore.on('change', this.fetchTask);
+        this.fetchTask()
+        DataStore.on('change', this.fetchTask)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchTask);
+        DataStore.removeListener('change', this.fetchTask)
     },
     render: function() {
         return (
@@ -537,7 +698,7 @@ var TasksItemRoute = React.createClass({
                   bsStyle='primary'>
                     <ol className='breadcrumb'>
                         <li>
-                            <a href='#tasks'>
+                            <a href='#/tasks'>
                                 Tasks
                             </a>
                         </li>
@@ -549,123 +710,96 @@ var TasksItemRoute = React.createClass({
                       task={this.state.task} />
                 </Bootstrap.Panel>
             </div>
-        );
+        )
     }
-});
+})
 
-var TasksRoute = React.createClass({
+const TasksRoute = React.createClass({
     fetchTasks: function() {
-        var tasks = DataStore.fetchCollection('tasks');
-        for (var i = 0; i < tasks.length; i++) {
-            var task = tasks[i];
-            tasks[i].href = task['_links']['self'].href;
-        }
-        this.setState({tasks: tasks});
+        var tasks = DataStore.fetchCollection('tasks')
+        this.setState({tasks: tasks})
     },
     getInitialState: function() {
         return {
-            tasks: []
-        };
+            tasks : []
+        }
     },
     componentDidMount: function() {
-        this.fetchTasks();
-        DataStore.on('change', this.fetchTasks);
+        this.fetchTasks()
+        DataStore.on('change', this.fetchTasks)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchTasks);
+        DataStore.removeListener('change', this.fetchTasks)
     },
     render: function() {
         return (
             <Bootstrap.Panel 
-              bsStyle='primary'
-              header='Tasks'>
-                <TasksView 
-                  tasks={this.state.tasks} />
+              bsStyle = 'primary'
+              header  = 'Tasks'>
+                <TasksView tasks={this.state.tasks} />
             </Bootstrap.Panel>
         )
     }
-});
+})
 
-var ProductsItemRoute = React.createClass({
+const ProductsItemRoute = React.createClass({
     render: function() {
         return (
-            <ProductsEntityView 
-              productId={this.props.params.id} />
+            <ProductsEntityView productId={this.props.params.id} />
         )
     }
-});
+})
 
-var ProductsRoute = React.createClass({
+const ProductsRoute = React.createClass({
     fetchProducts: function() {
-        var data = DataStore.fetchCollection('products');
-        for (var i = 0; i < data.length; i++) {
-            data[i].href = data[i]['_links']['self'].href;
-        }
-        this.setState({data: data});
+        let products = DataStore.fetchCollection('products')
+        this.setState({products: products})
     },
     getInitialState: function() {
         return {
-            data: []
-        };
+            products : []
+        }
     },
     componentDidMount: function() {
-        this.fetchProducts();
-        DataStore.on('change', this.fetchProducts);
+        this.fetchProducts()
+        DataStore.on('change', this.fetchProducts)
     },
     componentWillUnmount: function() {
-        DataStore.removeListener('change', this.fetchProducts);
+        DataStore.removeListener('change', this.fetchProducts)
     },
     render: function() {
         return (
-            <ProductsView 
-              products={this.state.data} />
+            <ProductsView products={this.state.products} />
         )
     }
-});
+})
 
-var PerformanceRoute = React.createClass({
+const PerformanceRoute = React.createClass({
     render: function() {
         return (
             <PerformanceView />
         )
     }
-});
-
-var NotificationComponent = React.createClass({
-    componentDidMount: function() {
-        DataStore.on('notification', this.addNotification);
-    },
-    componentWillUnmount: function() {
-        DataStore.removeListener('notification', this.addNotification);
-    },
-    addNotification: function(notification) {
-        this.refs.notifications.addNotification(notification);
-    },
-    render: function() {
-        return (
-            <NotificationSystem ref='notifications' />
-        );
-    }
-});
+})
 
 var routes = (
     <Route handler={App}>
-        <Route path='orders/:id' handler={OrdersItemRoute} />
-        <Route path='orders' handler={OrdersRoute} />
-        <Route path='stock' handler={StockRoute} />
-        <Route path='customers' handler={CustomersRoute} />
-        <Route path='registrations' handler={RegistrationsRoute} />
-        <Route path='customers/:id' handler={CustomersItemRoute} />
-        <Route path='complaints/:id' handler={ComplaintsItemRoute} />
-        <Route path='complaints' handler={ComplaintsRoute} />
-        <Route path='contacts/:id' handler={ContactsItemRoute} />
-        <Route path='tasks/:id' handler={TasksItemRoute} />
-        <Route path='tasks' handler={TasksRoute} />
-        <Route path='products/:id' handler={ProductsItemRoute} />
-        <Route path='products' handler={ProductsRoute} />
-        <Route path='performance' handler={PerformanceRoute} />
+        <Route path ='orders/:id'     handler={OrdersItemRoute}     />
+        <Route path ='orders'         handler={OrdersRoute}         />
+        <Route path ='stock/:id'      handler={StockItemRoute}      />
+        <Route path ='stock'          handler={StockRoute}          />
+        <Route path ='customers'      handler={CustomersRoute}      />
+        <Route path ='customers/:id'  handler={CustomersItemRoute}  />
+        <Route path ='complaints/:id' handler={ComplaintsItemRoute} />
+        <Route path ='complaints'     handler={ComplaintsRoute}     />
+        <Route path ='contacts/:id'   handler={ContactsItemRoute}   />
+        <Route path ='tasks/:id'      handler={TasksItemRoute}      />
+        <Route path ='tasks'          handler={TasksRoute}          />
+        <Route path ='products/:id'   handler={ProductsItemRoute}   />
+        <Route path ='products'       handler={ProductsRoute}       />
+        <Route path ='performance'    handler={PerformanceRoute}    />
     </Route>
-);
+)
 
 Router.run(routes, Router.HashLocation, function(Root) {
     React.render(
@@ -674,6 +808,13 @@ Router.run(routes, Router.HashLocation, function(Root) {
             <Root />
         </div>, 
         document.getElementById('main')
-    );
+    )
+})
+
+// Close responsive Bootstrap nav when selecting an item
+$('.navbar-fixed-top a').on('click', function(e) {
+    if ($('body').width() < 768 && 'LI' === e.target.parentNode.nodeName) {
+        $(".navbar-toggle").click();
+    }
 });
 

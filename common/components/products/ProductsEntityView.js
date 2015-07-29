@@ -1,113 +1,93 @@
-var Bootstrap                        = require('react-bootstrap');
-var Griddle                          = require('griddle-react');
-var React                            = require('react');
-var DataStore                        = require('../../store/DataStore');
-var QualityComplaintRegistrationForm = require('../../components/complaints/QualityComplaintRegistrationForm');
-var ServiceComplaintRegistrationForm = require('../../components/complaints/ServiceComplaintRegistrationForm');
+import Bootstrap                        from 'react-bootstrap'
+import Griddle                          from 'griddle-react'
+import React                            from 'react'
+import DataStore                        from '../../store/DataStore'
+import QualityComplaintRegistrationForm from '../../components/complaints/QualityComplaintRegistrationForm'
+import ServiceComplaintRegistrationForm from '../../components/complaints/ServiceComplaintRegistrationForm'
 
-var Panel                            = Bootstrap.Panel;
-var TabPane                          = Bootstrap.TabPane;
-var TabbedArea                       = Bootstrap.TabbedArea;
-var Table                            = Bootstrap.Table;
-var Modal                            = Bootstrap.Modal;
+import {Panel, TabPane, TabbedArea, Table, Modal} from 'react-bootstrap'
 
-var ProductsEntityView = React.createClass({
-    getProduct: function() {
-        var product = DataStore.getItem('products/' + this.props.productId);
-        var stock  = null, 
-            prices = null;
-        if (product && product.hasOwnProperty('_embedded')) {
-            stock  = product['_embedded']['stock'];
-            prices = product['_embedded']['prices'];
+const ProductsEntityView = React.createClass({
+    getDefaultProps: function() {
+        return {
+            parentResource : 'Products'
         }
-        this.setState({
-            product : product,
-            stock   : stock,
-            prices  : prices
-        });
     },
     getInitialState: function() {
         return {
             product : null,
             stock   : null, 
             prices  : null
-        };
+        }
+    },
+    getProduct: function() {
+        let product = DataStore.getItem('products/' + this.props.productId)
+        this.setState({
+            product : product,
+            stock   : product ? product.getEmbedded('stock') : null,
+            prices  : product ? product.getEmbedded('prices') : null
+        })
     },
     componentDidMount: function() {
-        this.getProduct();
+        this.getProduct()
     },
-    render: function() {
-        var product = this.state.product,
-            stock   = this.state.stock,
-            prices  = this.state.prices;
-        if (!product)
-            return <span />;
-        var stockItems = (
-            <p>No data available.</p>
-        );
-        var priceItems = (
-            <p>No data available.</p>
-        );
-        if (stock) {
-            stockItems = (
-                <Table bordered striped condensed>
-                    <col width='180' />
-                    <col />
-                    <tr>
-                        <td><b>Actual</b></td>
-                        <td>{stock.actual}</td>
-                    </tr>
-                    <tr>
-                        <td><b>Available</b></td>
-                        <td>{stock.available}</td>
-                    </tr>
-                </Table>
-            );
-        }
-        if (prices) {
-            var items = [],
-                i = 0;
+    renderPrices: function() {
+        let prices = this.state.prices,
+            items = [],
+            i = 0
+        if ('object' === typeof prices) {
             for (var key in prices) {
-                if (0 === key.indexOf('_'))
-                    continue;
+                if (0 === key.indexOf('_') || 'function' === typeof prices[key])
+                    continue
                 items.push(
                     <tr key={i++}>
                         <td><b>{key}</b></td>
                         <td>{prices[key]}</td>
                     </tr>
-                );
+                )
             }
-            priceItems = (
+        }
+        if (!items.length) {
+            return (
+                <p>No data available.</p>
+            )
+        } else {
+            return (
                 <Table bordered striped condensed>
                     <col width='180' />
                     <col />
                     {items}
                 </Table>
-            );
+            )
         }
+    },
+    render: function() {
+        var product = this.state.product,
+            stock   = this.state.stock
+        if (!product)
+            return <span />
+        let parentResource = this.props.parentResource
         return ( 
             <div>
                <Panel 
                   className='panel-fill'
                   bsStyle='primary'  
-                  header='Products'>
-
+                  header={parentResource}>
                     <ol className='breadcrumb'>
                         <li>
-                            <a href='#products'>
-                                Products
+                            <a href={'#/' + parentResource.toLowerCase()}>
+                                {parentResource}      
                             </a>
                         </li>
                         <li className='active'>
                             {product.name}
                         </li>
                     </ol>
- 
                     <h3>{product.name}</h3>
                     <hr />
-                    <Bootstrap.Well>
+                    <blockquote>
                         {product.description}
-                    </Bootstrap.Well>
+                    </blockquote>
                     <h4>Properties</h4>
                     <Table bordered striped>
                         <col width='200' />
@@ -126,17 +106,32 @@ var ProductsEntityView = React.createClass({
                     <Bootstrap.Row>
                         <Bootstrap.Col md={6}>
                             <h4>Prices</h4>
-                            {priceItems}
+                            {this.renderPrices()}
                         </Bootstrap.Col>
                         <Bootstrap.Col md={6}>
-                           <h4>Stock</h4>
-                            {stockItems}
+                            <h4>Stock</h4>
+                            {stock ? (
+                                <Table bordered striped condensed>
+                                    <col width='180' />
+                                    <col />
+                                    <tr>
+                                        <td><b>Actual</b></td>
+                                        <td>{stock.actual}</td>
+                                    </tr>
+                                    <tr>
+                                        <td><b>Available</b></td>
+                                        <td>{stock.available}</td>
+                                    </tr>
+                                </Table>
+                            ) : (
+                                <p>No data available.</p>
+                            )}
                         </Bootstrap.Col>
                     </Bootstrap.Row>
                 </Panel>
             </div>
-        );
+        )
     }
-});
+})
 
-module.exports = ProductsEntityView;
+module.exports = ProductsEntityView

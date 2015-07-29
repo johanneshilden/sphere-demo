@@ -19,15 +19,16 @@
     <![endif]-->
 </head>
 <body>
-    <div style="position:absolute; right:10px; top:5px;"><a href="#" onclick="clr();">[clear local storage]</a></div>
+    <div style="position:absolute;right:170px;top:10px;z-index:9999;"><a href="javascript:clr()">[clear local data]</a></div>
     <div id="main"></div>
     <script src="../common/js/jquery.js"></script>
     <script src="../common/js/bootstrap.min.js"></script>
+    <script src="//maps.googleapis.com/maps/api/js?v=3.exp"></script>
     <script src="bundle.js"></script>
     <script>
         function clr() {
-            localStorage.clear(); 
-            alert('Ok!');
+            localStorage.clear();
+            alert('ok');
         }
     </script>
 </body>

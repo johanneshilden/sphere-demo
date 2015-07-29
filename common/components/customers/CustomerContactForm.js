@@ -1,62 +1,51 @@
-var Bootstrap           = require('react-bootstrap');
-var EventEmitter        = require('events').EventEmitter;
-var Griddle             = require('griddle-react');
-var React               = require('react');
-var assign              = require('object-assign');
-var AppDispatcher       = require('../../dispatcher/AppDispatcher');
-var DataStore           = require('../../store/DataStore');
+var Bootstrap           = require('react-bootstrap')
+var EventEmitter        = require('events').EventEmitter
+var Griddle             = require('griddle-react')
+var React               = require('react')
+var assign              = require('object-assign')
 
-var Panel               = Bootstrap.Panel;
-var Table               = Bootstrap.Table;
-var Modal               = Bootstrap.Modal;
-var Button              = Bootstrap.Button;
-var Input               = Bootstrap.Input;
+var AppDispatcher       = require('../../dispatcher/AppDispatcher')
+var DataStore           = require('../../store/DataStore')
+var FormElementMixin    = require('../FormElementMixin')
+var FormItemStore       = require('../../store/FormItemStore')
+
+var Button              = Bootstrap.Button
+var Input               = Bootstrap.Input
+var Panel               = Bootstrap.Panel
+var Table               = Bootstrap.Table
 
 function validateEmail(email) {
-    var re = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i;
-    return re.test(email);
+    let re = /^([\w-]+(?:\.[\w-]+)*)@((?:[\w-]+\.)*\w[\w-]{0,66})\.([a-z]{2,6}(?:\.[a-z]{2})?)$/i
+    return re.test(email)
 }
 
-var CustomerContactStore = assign({}, EventEmitter.prototype, {
+const ContactTypeStore = assign({}, FormItemStore)
 
-    _contactType: '',
-
-    setContactType: function(type) {
-        this._contactType = type;
-        this.emit('change');
-    },
-
-    contactType: function() {
-        return this._contactType;
+AppDispatcher.register(payload => {
+    if ('contact-form-type-assign' === payload.actionType) {
+        ContactTypeStore.setValue(payload.value)
+    } else if ('contact-form-reset' === payload.actionType) {
+        ContactTypeStore.reset()
+    } else if ('contact-form-refresh' === payload.actionType) {
+        ContactTypeStore.refresh()
     }
+})
 
-});
-
-var CustomerContactTypeInput = React.createClass({
+const ContactTypeInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: ContactTypeStore,
     getInitialState: function() {
         return {
-            value: '',
-            hint: null,
-            validationState: null
-        };
+            value           : '',
+            validationState : null,
+            hint            : null
+        }
     },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        this.setState({
-            value: newValue
-        });
+    update: function(value) {
         AppDispatcher.dispatch({
-            actionType: 'customer-contact-type-assign',
-            contactType: newValue
-        });
-    },
-    reset: function() {
-        this.setState(this.getInitialState());
+            actionType : 'contact-form-type-assign',
+            value      : value
+        })
     },
     render: function() {
         return (
@@ -87,101 +76,97 @@ var CustomerContactTypeInput = React.createClass({
                   Other
                 </option>
             </Input>
-        );
+        )
     }
-});
+})
 
-var CustomerContactInfoInput = React.createClass({
-    getInitialState: function() {
-        return {
-            value: '',
-            hint: null,
-            validationState: null
-        };
-    },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        var hint = null,
-            validationState = null,
-            length = newValue.length;
-        if (length) { 
-            validationState = 'success'; 
-            switch (CustomerContactStore.contactType()) {
+const ContactInfoStore = assign({}, FormItemStore, {
+    validate: function() {
+        if (this.value.length) { 
+            this.state = 'success'
+            this.hint  = null
+            switch (ContactTypeStore.getValue()) {
                case 'Phone number':
-                    if (!/^\+?[0-9\.\-\s]+$/.test(newValue)) {
-                        validationState = 'error'; 
-                        hint = 'Not a phone number.';
+                    if (!/^\+?[0-9\.\-\s]+$/.test(this.value)) {
+                        this.state = 'error'
+                        this.hint  = 'Not a valid phone number.'
                     }
-                    break;
+                    break
                 case 'Email address':
-                    if (!validateEmail(newValue)) {
-                        validationState = 'warning'; 
-                        hint = 'Not a valid email address.';
+                    if (!validateEmail(this.value)) {
+                        this.state = 'warning'
+                        this.hint  = 'Not a valid email address.'
                     }
-                    break;
+                    break
                 case 'Address':
                 default:
-                    break;
+                    break
             }
         } else {
-            validationState = 'error'; 
-            hint = 'This value is required.';
+            this.state = 'error'
+            this.hint  = 'This value is required.'
         }
-        this.setState({
-            value: newValue,
-            hint: hint,
-            validationState: validationState
-        }); 
+    }
+})
+
+AppDispatcher.register(payload => {
+    if ('contact-form-info-assign' === payload.actionType) {
+        ContactInfoStore.setValue(payload.value)
+    } else if ('contact-form-reset' === payload.actionType) {
+        ContactInfoStore.reset()
+    } else if ('contact-form-refresh' === payload.actionType) {
+        ContactInfoStore.refresh()
+    }
+})
+
+const ContactInfoInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: ContactInfoStore,
+    getInitialState: function() {
+        return {
+            value           : '',
+            validationState : null,
+            hint            : null
+        }
     },
-    reset: function() {
-        this.setState(this.getInitialState());
-    },
-    isValid: function() {
-        return ('success' === this.state.validationState);
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'contact-form-info-assign',
+            value      : value
+        })
     },
     onContactTypeChange: function() {
-        if (this.state.value) {
-            this.forceValidate();
+        if (ContactInfoStore.getValue()) {
+            ContactInfoStore.refresh()
         } else {
-            this.reset();
+            ContactInfoStore.reset()
         }
     },
     componentDidMount: function() {
-        CustomerContactStore.on('change', this.onContactTypeChange);
+        ContactTypeStore.on('change', this.onContactTypeChange)
     },
     componentWillUnmount: function() {
-        CustomerContactStore.removeListener('change', this.onContactTypeChange);
+        ContactTypeStore.removeListener('change', this.onContactTypeChange)
     },
     render: function() {
-        var addon = null,
-            placeholder = '';
-        switch (CustomerContactStore.contactType()) {
+        let addon = null,
+            placeholder = ''
+        switch (ContactTypeStore.getValue()) {
             case 'Address':
-                addon = (
-                    <i className='fa fa-home fa-fw'></i>
-                );
-                placeholder = 'A street or postal address';
-                break;
+                addon = (<i className='fa fa-home fa-fw'></i>)
+                placeholder = 'A street or postal address'
+                break
             case 'Phone number':
-                addon = (
-                    <i className='fa fa-phone fa-fw'></i>
-                );
-                placeholder = 'A phone number';
-                break;
+                addon = (<i className='fa fa-phone fa-fw'></i>)
+                placeholder = 'A phone number'
+                break
             case 'Email address':
-                addon = (
-                    <i className='fa fa-envelope-o fa-fw'></i>
-                );
-                placeholder = 'A valid email address';
-                break;
+                addon = (<i className='fa fa-envelope-o fa-fw'></i>)
+                placeholder = 'A valid email address'
+                break
             default:
-                placeholder = 'Contact information associated with the customer';
-                break;
+                placeholder = 'Other information associated with the customer'
+                break
         }
         return (
             <Input 
@@ -195,29 +180,37 @@ var CustomerContactInfoInput = React.createClass({
               label='Contact details'
               ref='input' 
               onChange={this.handleChange} />
-        );
+        )
     }
-});
+})
 
-var CustomerContactMetaInput = React.createClass({
+const ContactMetaStore = assign({}, FormItemStore)
+
+AppDispatcher.register(payload => {
+    if ('contact-form-meta-assign' === payload.actionType) {
+        ContactMetaStore.setValue(payload.value)
+    } else if ('contact-form-reset' === payload.actionType) {
+        ContactMetaStore.reset()
+    } else if ('contact-form-refresh' === payload.actionType) {
+        ContactMetaStore.refresh()
+    }
+})
+
+const ContactMetaInput = React.createClass({
+    mixins: [FormElementMixin],
+    store: ContactMetaStore,
     getInitialState: function() {
         return {
-            value: ''
-        };
+            value           : '',
+            validationState : null,
+            hint            : null
+        }
     },
-    handleChange: function(event) {
-        this._update(event.target.value);
-    },
-    forceValidate: function() {
-        this._update(this.state.value);
-    },
-    _update: function(newValue) {
-        this.setState({
-            value: newValue
-        }); 
-    },
-    reset: function() {
-        this.setState(this.getInitialState());
+    update: function(value) {
+        AppDispatcher.dispatch({
+            actionType : 'contact-form-meta-assign',
+            value      : value
+        })
     },
     render: function() {
         return (
@@ -230,42 +223,41 @@ var CustomerContactMetaInput = React.createClass({
               label='Comment'
               ref='input' 
               onChange={this.handleChange} />
-        );
+        )
     }
-});
+})
 
-AppDispatcher.register(function(payload) {
-    switch (payload.actionType) {
-        case 'customer-contact-type-assign':
-            CustomerContactStore.setContactType(payload.contactType);
-            break;
-        default:
-            break;
-    }
-});
-
-var CustomerContactForm = React.createClass({
+const CustomerContactForm = React.createClass({
     componentDidMount: function() {
         AppDispatcher.dispatch({
-            actionType: 'customer-contact-type-assign',
-            contactType: 'Address'
-        });
+            actionType : 'contact-form-type-assign',
+            value      : 'Address'
+        })
     },
     handleSubmit: function() {
-        var isValid = this.refs.contactInfoInput.isValid();
+        let isValid = !!ContactInfoStore.isValid()
         if (!isValid) {
-            this.refs.contactInfoInput.forceValidate();
+            AppDispatcher.dispatch({
+                actionType: 'contact-form-refresh'
+            })
         } else {
-            var customerHref = this.props.customer['_links']['self'];
-            var contact = {
-                'type'        : CustomerContactStore.contactType(),
-                'info'        : this.refs.contactInfoInput.state.value,
-                'meta'        : this.refs.contactMetaInput.state.value,
+            let contact = {
+                'type'        : ContactTypeStore.getValue(),
+                'info'        : ContactInfoStore.getValue(),
+                'meta'        : ContactMetaStore.getValue(),
                 '_links'      : {
-                    'customer'    : customerHref,
-                    '_collection' : customerHref
+                    'customer'    : { href: this.props.customer.id },
+                    '_collection' : { href: this.props.customer.id }
                 }
-            };
+            }
+            let activity = {
+                'type'     : 'contact-add',
+                'activity' : this.props.activityType,
+                'created'  : Date.now(),
+                '_links'   : {
+                    '_collection' : { href: this.props.customer.id }
+                }
+            }
             AppDispatcher.dispatch({
                 actionType : 'customer-activity',
                 command    : {
@@ -273,32 +265,30 @@ var CustomerContactForm = React.createClass({
                     resource   : 'contacts', 
                     payload    : contact 
                 },
-                activity   : {
-                    'type'     : 'contact-add',
-                    'activity' : this.props.activityType,
-                    'created'  : Date.now(),
-                    '_links'   : {
-                        '_collection' : customerHref
-                    }
-                }
-            });
-            this.props.close();
+                activity   : activity
+            })
+            this.resetForm()
+            this.props.close()
         }
+    },
+    resetForm: function() {
+        AppDispatcher.dispatch({
+            actionType: 'contact-form-reset'
+        })
     },
     render: function() {
         return (
             <div>
-                <CustomerContactTypeInput 
-                  ref='contactTypeInput' />
-                <CustomerContactInfoInput 
-                  ref='contactInfoInput' />
-                <CustomerContactMetaInput 
-                  ref='contactMetaInput' />
+                <ContactTypeInput ref='contactTypeInput' />
+                <ContactInfoInput ref='contactInfoInput' />
+                <ContactMetaInput ref='contactMetaInput' />
                 <hr />
                 <Bootstrap.ButtonGroup>
                     <Button
                       bsStyle='primary'
                       onClick={this.handleSubmit}>
+                        <Bootstrap.Glyphicon 
+                          glyph='ok' />
                         Save
                     </Button>
                     <Button
@@ -308,8 +298,8 @@ var CustomerContactForm = React.createClass({
                     </Button>
                 </Bootstrap.ButtonGroup>
             </div>
-        );
+        )
     }
-});
+})
 
-module.exports = CustomerContactForm;
+module.exports = CustomerContactForm

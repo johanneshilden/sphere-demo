@@ -1,7 +1,7 @@
 {
   "price-categories": [
       {
-        "name": "Default"
+        "name": "Cafe"
       },
       {
         "name": "Wholesale"
@@ -10,18 +10,21 @@
         "name": "Retail"
       },
       {
-        "name": "Distributor"
+        "name": "Duka"
       },
       {
-        "name": "Partner"
+        "name": "Hotel"
       }
   ],
   "areas": [
       {
-        "name": "Area #1"
+        "name": "Kinondoni"
       },
       {
-        "name": "Area #2"
+        "name": "Temeke"
+      },
+      {
+        "name": "Ilala"
       }
   ],
   "products": [
@@ -73290,11 +73293,6 @@
     ],
   "tasks": [
       {
-        "_links": { 
-          "_collection": { 
-            "href": "customers/1" 
-          } 
-        },
         "description": "Evaluate the field staff dashboard.",
         "created": "1437261368204",
         "due": "1437261368204"

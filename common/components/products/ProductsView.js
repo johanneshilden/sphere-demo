@@ -1,40 +1,53 @@
-var Bootstrap           = require('react-bootstrap');
-var Griddle             = require('griddle-react');
-var React               = require('react');
-var BootstrapPager      = require('../BootstrapPager');
+import Bootstrap           from 'react-bootstrap'
+import Griddle             from 'griddle-react'
+import React               from 'react'
 
-var Panel               = Bootstrap.Panel;
+import BootstrapPager      from '../BootstrapPager'
 
-var ProductsView = React.createClass({
+import {Panel} from 'react-bootstrap'
+
+const ProductsView = React.createClass({
     getDefaultProps: function() {
         return {
-            resultsPerPage: 8
-        };
+            resultsPerPage : 8
+        }
+    },
+    viewProduct: function(row) {
+        window.location.hash = row.props.data.id 
     },
     render: function() {
         var metadata = [
-            {'columnName': 'sku', 'displayName': 'SKU'}, 
-            {'columnName': 'name', 'displayName': 'Name'}, 
-            {'columnName': 'unitSize', 'displayName': 'Unit size'}
-        ];
+            {
+                'columnName'  : 'sku', 
+                'displayName' : 'SKU'
+            }, 
+            {
+                'columnName'  : 'name', 
+                'displayName' : 'Name'
+            }, 
+            {
+                'columnName'  : 'unitSize', 
+                'displayName' : 'Unit size'
+            }
+        ]
         return (
             <Panel 
-              bsStyle='primary'
-              header='Products'>
+              bsStyle = 'primary'
+              header  = 'Products'>
                 <Griddle 
-                  results={this.props.products} 
-                  showFilter={true}
-                  resultsPerPage={this.props.resultsPerPage}
-                  useGriddleStyles={false}
-                  columnMetadata={metadata}
-                  onRowClick={function(row) { window.location.hash = row.props.data.href; }}
-                  useCustomPagerComponent={true}
-                  customPagerComponent={BootstrapPager}
-                  tableClassName='table table-bordered table-select' 
-                  columns={['sku', 'name', 'unitSize']} />
+                  results                 = {this.props.products}
+                  showFilter              = {true}
+                  resultsPerPage          = {this.props.resultsPerPage}
+                  useGriddleStyles        = {false}
+                  columnMetadata          = {metadata}
+                  onRowClick              = {this.viewProduct}
+                  useCustomPagerComponent = {true}
+                  customPagerComponent    = {BootstrapPager}
+                  tableClassName          = 'table table-bordered table-select'
+                  columns                 = {['sku', 'name', 'unitSize']} />
             </Panel>
-        );
+        )
     }
-});
+})
 
-module.exports = ProductsView;
+module.exports = ProductsView

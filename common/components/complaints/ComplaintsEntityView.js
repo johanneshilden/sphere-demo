@@ -1,28 +1,27 @@
-var Bootstrap                        = require('react-bootstrap');
-var Griddle                          = require('griddle-react');
-var React                            = require('react');
-var TimeAgo                          = require('react-timeago');
-var DataStore                        = require('../../store/DataStore');
-var AppDispatcher                    = require('../../dispatcher/AppDispatcher');
+import Bootstrap          from 'react-bootstrap'
+import Griddle            from 'griddle-react'
+import React              from 'react'
+import TimeAgo            from 'react-timeago'
 
-var Panel                            = Bootstrap.Panel;
-var TabPane                          = Bootstrap.TabPane;
-var TabbedArea                       = Bootstrap.TabbedArea;
-var Button                           = Bootstrap.Button;
-var Table                            = Bootstrap.Table;
-var Modal                            = Bootstrap.Modal;
+import AppDispatcher      from '../../dispatcher/AppDispatcher'
+import DataStore          from '../../store/DataStore'
 
-var ComplaintsEntityView = React.createClass({
+import {Panel, TabPane, TabbedArea, Button, Table} from 'react-bootstrap'
+
+const ComplaintsEntityView = React.createClass({
+    getDefaultProps: function() {
+        return {
+            onResolve: function() {}
+        }
+    },
     resolve: function() {
-        var patch = {
-            resolved: Date.now()
-        };
-        var complaint = this.props.complaint;
+        let patch = { resolved: Date.now() }
+        let complaint = this.props.complaint
         AppDispatcher.dispatch({
             actionType : 'customer-activity',
             command    : {
                 method   : 'PATCH',
-                resource : complaint['_links']['self'].href,
+                resource : complaint.id, 
                 payload  : patch
             },
             activity   : {
@@ -37,82 +36,34 @@ var ComplaintsEntityView = React.createClass({
                 message : 'The complaint was successfully resolved.',
                 level   : 'success'
             }
-        });
+        })
+        this.props.onResolve()
+    },
+    renderButton: function() {
+        let complaint = this.props.complaint
+        if (!complaint || !!complaint.resolved) {
+            return ( <span /> )
+        }
+        return (
+            <div>
+                <Button 
+                  onClick={this.resolve} 
+                  block>
+                    <Bootstrap.Glyphicon
+                      glyph='ok' />
+                    Resolve
+                </Button>
+            </div>
+        )
     },
     render: function() {
-        var complaint = this.props.complaint;
+        let complaint = this.props.complaint
         if (!complaint) {
-            return <span>Error: Invalid or missing record.</span>;
+            return (
+                <span>Error: Invalid or missing record.</span>
+            )
         }
-        var description = null;
-        if (complaint.description) {
-            description = (
-                <tr>
-                    <td><b>Description</b></td>
-                    <td>{complaint.description}</td>
-                </tr>
-            );
-        }
-        var products = <span />
-            i = 0;
-        if (complaint.products) {
-            var items = 
-                complaint.products.map(function(item) {
-                    return (
-                        <tr key={i++}>
-                            <td>{item.product.name}</td>
-                            <td>{item.batch}</td>
-                            <td>{item.quantity}</td>
-                            <td>{item.comment}</td>
-                        </tr>
-                    );
-                });
-            if (items.length) {
-                products = (
-                    <div>
-                        <h4>Products</h4>
-                        <Table striped bordered fill>
-                            <thead>
-                                <th>Product name</th>
-                                <th>Batch</th>
-                                <th>Quantity</th>
-                                <th>Comment</th>
-                            </thead>
-                            <tbody>
-                                {items}
-                            </tbody>
-                        </Table>
-                    </div>
-                );
-            }
-        }
-        var cmplStatus = (
-            <span>
-                Unresolved
-            </span>
-        );
-        var resolve = <span />;
-        if (complaint.resolved) {
-            cmplStatus = (
-                <span>Resolved&nbsp;
-                    <TimeAgo 
-                      date={Number(complaint.resolved)} 
-                      formatter={DataStore.timeFormatter} />
-                </span>
-            );
-        } else {
-            resolve = (
-                <div>
-                    <Button 
-                      onClick={this.resolve} 
-                      block>
-                        <Bootstrap.Glyphicon
-                          glyph='ok' />
-                        Resolve
-                    </Button>
-                </div>
-            );
-        }
+        let i = 0
         return (
             <div>
                 <Table striped bordered fill>
@@ -125,28 +76,77 @@ var ComplaintsEntityView = React.createClass({
                         </tr>
                         <tr>
                             <td><b>Type</b></td>
-                            <td>{'quality' === complaint.type ? 'Quality' : 'Service'}</td>
+                            <td>{('quality' === complaint.type) ? 'Quality' : 'Service'}</td>
                         </tr>
                         <tr>
                             <td><b>Created</b></td>
                             <td>
                                 <TimeAgo 
-                                  date={Number(complaint.created)} 
-                                  formatter={DataStore.timeFormatter} />
+                                  date      = {Number(complaint.created)}
+                                  formatter = {DataStore.timeFormatter} />
                             </td>
                         </tr>
                         <tr>
                             <td><b>Status</b></td>
-                            <td>{cmplStatus}</td>
+                            <td>{complaint.resolved ? (
+                                <span>
+                                    <Bootstrap.Glyphicon 
+                                      style={{marginRight: '.4em'}}
+                                      glyph='ok' />
+                                    <span>Resolved&nbsp;
+                                        <TimeAgo 
+                                          date      = {Number(complaint.resolved)}
+                                          formatter = {DataStore.timeFormatter} />
+                                    </span>
+                                </span>
+                            ) : (
+                                <h4 style={{margin: '0 0 .2em'}}>
+                                    <Bootstrap.Label
+                                      bsStyle='danger'>
+                                        Unresolved
+                                    </Bootstrap.Label>
+                                </h4>
+                            )}</td>
                         </tr>
-                        {description}
+                        {complaint.description ? (
+                            <tr>
+                                <td><b>Description</b></td>
+                                <td>{complaint.description}</td>
+                            </tr>
+                        ) : ( null )}
                     </tbody>
                 </Table>
-                {products}
-                {resolve}
+                {(complaint.items && complaint.items.length) ? (
+                    <div>
+                        <h4>Products</h4>
+                        <Table striped bordered fill>
+                            <thead>
+                                <th>Product name</th>
+                                <th>Batch</th>
+                                <th>Quantity</th>
+                                <th>Comment</th>
+                            </thead>
+                            <tbody>
+                                {complaint.items.map(item => {
+                                    return (
+                                        <tr key={i++}>
+                                            <td>{item.product.name}</td>
+                                            <td>{item.batch}</td>
+                                            <td>{item.quantity}</td>
+                                            <td>{item.comment}</td>
+                                        </tr>
+                                    )
+                                })}
+                            </tbody>
+                        </Table>
+                    </div>
+                ) : (
+                    <span />
+                )}
+                {this.renderButton()}
             </div>
-        );
+        )
     }
-});
+})
 
-module.exports = ComplaintsEntityView;
+module.exports = ComplaintsEntityView

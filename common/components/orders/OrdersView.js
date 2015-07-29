@@ -1,96 +1,109 @@
-var Bootstrap           = require('react-bootstrap');
-var Griddle             = require('griddle-react');
-var React               = require('react');
-var TimeAgo             = require('react-timeago');
-var DataStore           = require('../../store/DataStore');
-var BootstrapPager      = require('../BootstrapPager');
-var OrdersEntityView    = require('./OrdersEntityView');
+import Bootstrap           from 'react-bootstrap'
+import Griddle             from 'griddle-react'
+import React               from 'react'
+import TimeAgo             from 'react-timeago'
+import DataStore           from '../../store/DataStore'
+import BootstrapPager      from '../BootstrapPager'
+import OrdersEntityView    from './OrdersEntityView'
 
-var Panel               = Bootstrap.Panel;
-var TabPane             = Bootstrap.TabPane;
-var TabbedArea          = Bootstrap.TabbedArea;
-var Modal               = Bootstrap.Modal;
+import {Panel, TabPane, TabbedArea, Modal} from 'react-bootstrap'
 
-var OrdersView = React.createClass({
+const OrdersView = React.createClass({
     getInitialState: function() {
         return {
-            modalVisible : false,
+            activeOrder  : null,
             order        : null
-        };
+        }
     },
     getDefaultProps: function() {
         return {
-            resultsPerPage: 8
-        };
+            resultsPerPage : 8,
+            showCustomer   : true
+        }
     },
     closeModal: function() {
-        this.setState({modalVisible: false});
+        this.setState({activeOrder: null})
     },
     viewOrder: function(row) {
-        var order = DataStore.getItem(row.props.data['_links']['self'].href);
-        if (order && order.hasOwnProperty('_embedded')) {
-            order.products = order['_embedded'].items;
+        let order = DataStore.getItem(row.props.data.id)
+        if (order) {
+            order.items.forEach(item => {
+                item.product = item['_embedded']['product']
+            })
+            this.setState({activeOrder: order})
         }
-        this.setState({
-            modalVisible : true,
-            order        : order
-        });
-    },
-    renderModal: function() {
-        if (!this.state.modalVisible)
-            return <span />;
-        return (
-            <Modal 
-              onHide={this.closeModal}>
-                <Modal.Header 
-                  closeButton 
-                  onHide={this.closeModal}>
-                    <Modal.Title>
-                        Order details
-                    </Modal.Title>
-                </Modal.Header>
-                <Modal.Body>
-                    <OrdersEntityView order={this.state.order} />
-                </Modal.Body>
-            </Modal>
-        );
     },
     render: function() {
-        var metadata = [
-            {'columnName': 'customerName', 'displayName': 'Customer'},
+        const metadata = [
             {
-                'columnName': 'created', 
-                'displayName': 'Created',
-                'customComponent': React.createClass({
+                'columnName'      : 'customerName', 
+                'displayName'     : 'Customer'
+            },
+            {
+                'columnName'      : 'created',
+                'displayName'     : 'Created',
+                'customComponent' : React.createClass({
                     render: function() {
                         return (
-                            <TimeAgo date={Number(this.props.rowData.created)} 
+                            <TimeAgo 
+                              date={Number(this.props.rowData.created)} 
                               formatter={DataStore.timeFormatter} />
-                        );
+                        )
                     }
                 })
             },
-            {'columnName': 'total', 'displayName': 'Order total'}
-        ];
+            {
+                'columnName'      : 'itemCount', 
+                'displayName'     : '# of items'
+            },
+            {
+                'columnName'      : 'user', 
+                'displayName'     : 'User'
+            },
+            {
+                'columnName'      : 'total', 
+                'displayName'     : 'Order total'
+            }
+        ]
+
+        let columns = ['created', 'itemCount', 'user', 'total']
+
+        if (true === this.props.showCustomer) {
+            columns.unshift('customerName')
+        }
+
         return (
             <div>
-                {this.renderModal()}
+                <Modal 
+                  onHide = {this.closeModal}
+                  show   = {!!this.state.activeOrder}>
+                    <Modal.Header 
+                      closeButton 
+                      onHide={this.closeModal}>
+                        <Modal.Title>
+                            Order details
+                        </Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <OrdersEntityView order={this.state.activeOrder} />
+                    </Modal.Body>
+                </Modal>
                 <Griddle 
-                  results={this.props.orders} 
-                  showFilter={true}
-                  resultsPerPage={this.props.resultsPerPage}
-                  columnMetadata={metadata}
-                  useGriddleStyles={false}
-                  onRowClick={this.viewOrder}
-                  initialSort='created'
-                  initialSortAscending={false}
-                  useCustomPagerComponent={true}
-                  customPagerComponent={BootstrapPager}
-                  tableClassName='table table-bordered table-select' 
-                  columns={['customerName', 'created', 'total']} />
+                  results                 = {this.props.orders}
+                  showFilter              = {true}
+                  resultsPerPage          = {this.props.resultsPerPage}
+                  columnMetadata          = {metadata}
+                  useGriddleStyles        = {false}
+                  onRowClick              = {this.viewOrder}
+                  initialSort             = 'created'
+                  initialSortAscending    = {false}
+                  useCustomPagerComponent = {true}
+                  customPagerComponent    = {BootstrapPager}
+                  tableClassName          = 'table table-bordered table-select'
+                  columns                 = {columns} />
             </div>
-        );
+        )
     }
-});
+})
 
-module.exports = OrdersView;
+module.exports = OrdersView

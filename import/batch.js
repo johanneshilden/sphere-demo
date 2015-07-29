@@ -158,10 +158,19 @@ fs.readFile('install.json', 'utf8', function (err, data) {
         }
     }.bind(this)).auth(config.key, config.secret, true);
 
+    var count = 0;
     for (var key in obj) {
         var batch = obj[key];
         for (var i = 0; i < batch.length; i++) {
             var payload = batch[i];
+
+            /*  Insert a max. number of customers */
+            if ('customers' === key) {
+                count++;
+                if (count > 1000) 
+                    continue;
+            }
+
             var response = api.command({
                 method: 'POST',
                 resource: key,

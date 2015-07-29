@@ -31,6 +31,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
         var response = this.api.command(command);
         if ('success' === response.status)
             this.emit('change', command);
+        return response;
     }
 
     /*
