@@ -86,7 +86,6 @@ const StockView = React.createClass({
                               showFilter              = {true}
                               resultsPerPage          = {8}
                               useGriddleStyles        = {false}
-                              columnMetadata          = {activityMetadata}
                               useCustomPagerComponent = {true}
                               customPagerComponent    = {BootstrapPager}
                               columnMetadata          = {activityMetadata}
