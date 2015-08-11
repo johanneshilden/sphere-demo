@@ -1,0 +1,26 @@
+{
+    "targets": ["root"],
+    "syncPoint": 0,
+    "commit": [ 
+        { 
+            "up": { 
+                "method": "POST", 
+                "resource": "posts", 
+                "payload": {
+                    "title": "My first post",
+                    "body": "In omnium maluisset eum, per putent singulis tincidunt id.",
+                    "user": "bob",
+                    "_links": {
+                        "self": { "href": "||posts/1||" }
+                    }
+                }
+            }, 
+            "down": { 
+                "method": "DELETE", 
+                "resource": "||posts/1||" 
+            },                   
+            "index": 1,                                                         
+            "timestamp": 1438388891 
+        } 
+    ] 
+}

@@ -1,18 +1,10 @@
-var Bootstrap           = require('react-bootstrap')
-var DateTimeField       = require('react-bootstrap-datetimepicker')
-var EventEmitter        = require('events').EventEmitter
-var React               = require('react')
-var assign              = require('object-assign')
+import Bootstrap           from 'react-bootstrap'
+import DateTimeField       from 'react-bootstrap-datetimepicker'
+import React               from 'react'
 
-var AppDispatcher       = require('../../dispatcher/AppDispatcher')
-var DataStore           = require('../../store/DataStore')
-var ProductInput        = require('../products/ProductInput')
+import AppDispatcher       from '../../dispatcher/AppDispatcher'
 
-var Button              = Bootstrap.Button
-var Input               = Bootstrap.Input
-var Modal               = Bootstrap.Modal
-var Panel               = Bootstrap.Panel
-var Table               = Bootstrap.Table
+import {Button} from 'react-bootstrap'
 
 const CallbackRegistrationForm = React.createClass({
     handleSubmit: function() {
@@ -50,21 +42,21 @@ const CallbackRegistrationForm = React.createClass({
                 <div className='form-group'>
                     <label>Callback time</label>
                     <DateTimeField 
-                      ref='dateTimeInput'
-                      dateTime={String(Date.now())} />
+                      ref      = 'dateTimeInput'
+                      dateTime = {String(Date.now())} />
                 </div>
                 <hr />
                 <Bootstrap.ButtonGroup>
                     <Button
-                      bsStyle='primary'
-                      onClick={this.handleSubmit}>
+                      bsStyle = 'primary'
+                      onClick = {this.handleSubmit}>
                         <Bootstrap.Glyphicon 
                           glyph='ok' />
                         Save
                     </Button>
                     <Button
-                      bsStyle='default'
-                      onClick={this.props.close}>
+                      bsStyle = 'default'
+                      onClick = {this.props.close}>
                         Cancel
                     </Button>
                 </Bootstrap.ButtonGroup>

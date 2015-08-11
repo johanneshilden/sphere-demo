@@ -4,28 +4,187 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title></title>
-    <link href="css/flatly.min.css" rel="stylesheet">
-    <link href="../common/assets/css/theme.css" rel="stylesheet">
-    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Sphere</title>
+    <link href="../common/css/bootstrap.min.css" rel="stylesheet">
+    <link href="../common/css/simple-sidebar.css" rel="stylesheet">
+    <link href="../common/font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+    <!--
+    <link href="../common/css/sb-admin.css" rel="stylesheet">
+    -->
+    <link href="../common/css/bootstrap-datetimepicker.min.css" rel="stylesheet">
+    <link href="../common/css/theme.css" rel="stylesheet">
+    <!--
+    <style type="text/css">
+
+        .dropdown-menu > li > a:hover, 
+        .dropdown-menu > li > a:focus {
+            background-color: #3a3a3a;
+        }
+
+        nav.navbar-inverse {
+            background: top left url('../common/images/texture.png'); 
+        }
+
+        .navbar-brand {
+            padding-top: .9em;
+        }
+
+        .sidebar-nav {
+            top: 60px;
+        }
+
+        .navbar-nav {
+            margin-top: 0;
+            margin-bottom: 0;
+        }
+
+        .sidebar-nav li {
+            line-height: 38px;
+        }
+
+        .sidebar-nav li a {
+            padding-bottom: 2px;
+        }
+
+        .sidebar-nav li a {
+            color: #e8e8e8;
+        }
+
+        .navbar-inverse .navbar-toggle {
+            border: none;
+        }
+
+        .navbar-inverse .navbar-toggle:focus {
+            background: inherit;
+        }
+
+        .navbar-inverse .navbar-toggle:hover,
+        .navbar-inverse .navbar-toggle:active,
+        .sidebar-wrapper {
+            -webkit-box-shadow: inset -14px 0px 7px -10px rgba(0,0,0,0.35);
+            -moz-box-shadow: inset -14px 0px 7px -10px rgba(0,0,0,0.35);
+            box-shadow: inset -14px 0px 7px -10px rgba(0,0,0,0.35);
+            background: #222;
+        }
+
+        .navbar-inverse .navbar-nav > .open > a, 
+        .navbar-inverse .navbar-nav > .open > a:hover, 
+        .navbar-inverse .navbar-nav > .open > a:focus,
+        .navbar-inverse .navbar-nav > li > a:hover,
+        .sidebar-nav li a:hover {
+            color: #fff;
+            background: rgba(0, 0, 0, 0.4);
+        }
+
+        .navbar-inverse .navbar-nav .open .dropdown-menu > li > a:focus {
+            outline: none;
+        }
+
+        .btn-sync > a > .glyphicon {
+            margin-right: 6px;
+        }
+
+        @media (min-width: 768px) {
+            .navbar-nav > li > a {
+                padding-top: 17px;
+                padding-bottom: 20px;
+                line-height: 21px;
+            }
+
+            .navbar-inverse .navbar-nav > li > a:focus {
+                color: #fff;
+            }
+
+            ul.navbar-nav.collapsed {
+                display: none;
+            }
+
+            .navbar-nav > li > a > .glyphicon {
+                font-size: 1.2em;
+                top: 3px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .navbar-collapse {
+                background: #222;
+                box-shadow: none;
+                -webkit-box-shadow: none;
+                -moz-box-shadow: none;
+            }
+
+            .navbar-inverse .navbar-nav > li > a,
+            .navbar-inverse .navbar-nav > li > a:focus,
+            .navbar-inverse .navbar-nav .open .dropdown-menu > li > a,
+            .navbar-inverse .navbar-nav .open .dropdown-menu > li > a:focus { 
+                color: #e8e8e8;
+            }
+
+            .navbar-inverse .navbar-nav .open .dropdown-menu > li > a:hover {
+                color: #fff;
+                background: rgba(0, 0, 0, 0.4);
+            }
+
+            .navbar-inverse .navbar-collapse, .navbar-inverse {
+                border: none;
+            }
+
+            .dropdown-menu {
+                padding-top: 0;
+                padding-bottom: 0;
+            }
+
+            .nav > li > a {
+                padding: 9px 20px 10px;
+            }
+
+        }
+        
+        /* -------------------- */
+
+        /* Container */
+        
+        #page-content-wrapper,
+        #page-content-wrapper > .container-fluid {
+            padding-left: 0;
+            padding-right: 0;
+        }
+
+        #page-content-wrapper {
+            padding-top: 60px;
+        }
+
+        .container-fluid > .panel > .panel-heading {
+            background: #fafafa;
+            border-radius: 0;
+            border: none;
+        }
+
+        .container-fluid > .panel-primary {
+            border-radius: 0;
+            border: none;
+        }
+
+        /* Nav */
+
+        .navbar-right > li > a {
+            padding-left: 1.2em;
+            padding-right: 1.2em;
+        }
+
+    </style>
+    -->
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
     <!--[if lt IE 9]>
-        <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
-        <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+        <script src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+        <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
 </head>
 <body>
-    <a href="javascript:localStorage.clear();alert('Local storage cleared.');" style="float:right;">[x]</a>
-
-    <div id="navbar-container"></div>
-
-    <div class="container" style="margin-top: 2em;">
-        <div id="modal-overlay"></div>
-        <div id="sync-widget"></div>
-        <div id="main"></div>
-    </div>
-
+    <div id="main"></div>
     <script src="bundle.js"></script>
-
 </body>
 </html>

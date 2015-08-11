@@ -1,33 +1,46 @@
 "use strict";
 
+var request    = require('request');
 var GroundFork = require('../groundfork');
 
-var store = new GroundFork.BrowserStorage({
-    namespace : 'sphere.installer'
-});
+function buildNode(key, secret) {
 
-var api = new GroundFork.Api({
-    storage            : store,
-    debugMode          : false,
-    onBatchJobStart    : function() { console.log('Batch job start.'); },
-    onBatchJobComplete : function() { console.log('Batch job complete.'); }
-});
+    var node = {};
 
-var config = {
-    url                : 'http://localhost:3333/',
-    key                : 'root',
-    secret             : 'root'
+    node.config = {
+        url                : 'http://localhost:3333/',
+        key                : key,
+        secret             : secret 
+    };
+    
+    node.store = new GroundFork.BrowserStorage({
+        namespace : key
+    });
+    
+    node.api = new GroundFork.Api({
+        storage            : node.store,
+        debugMode          : false,
+        onBatchJobStart    : function() { },
+        onBatchJobComplete : function() { }
+    });
+    
+    node.endpoint = new GroundFork.BasicHttpEndpoint({
+        api                : node.api,
+        url                : node.config.url,
+        clientKey          : node.config.key,
+        clientSecret       : node.config.secret,
+        requestHandler     : GroundFork.BasicHttpEndpoint.nodeRequestHandler,
+        onRequestStart     : function() { },
+        onRequestComplete  : function() { }
+    });
+
+    return node;
 };
 
-var endpoint = new GroundFork.BasicHttpEndpoint({
-    api                : api,
-    url                : config.url,
-    clientKey          : config.key,
-    clientSecret       : config.secret,
-    requestHandler     : GroundFork.BasicHttpEndpoint.nodeRequestHandler,
-    onRequestStart     : function() { console.log('Request start.'); },
-    onRequestComplete  : function() { console.log('Request complete.'); }
-});
+var rootNode = buildNode('root', 'root');
+var test1    = buildNode('test-user1', 'test');
+var test2    = buildNode('test-user2', 'test');
+var test3    = buildNode('test-user3', 'test');
 
 function assert(label, predicate, message) {
     if (true !== predicate) {
@@ -38,8 +51,9 @@ function assert(label, predicate, message) {
 }
 
 module.exports = {
-    store    : store,
-    api      : api,
-    endpoint : endpoint,
-    assert   : assert
+    rootNode  : rootNode,
+    testUser1 : test1,
+    testUser2 : test2,
+    testUser3 : test3,
+    assert    : assert
 };

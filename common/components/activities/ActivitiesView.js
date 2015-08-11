@@ -3,11 +3,8 @@ import Griddle             from 'griddle-react'
 import React               from 'react'
 import TimeAgo             from 'react-timeago'
 
-import AppDispatcher       from '../../dispatcher/AppDispatcher'
 import BootstrapPager      from '../BootstrapPager'
 import DataStore           from '../../store/DataStore'
-
-import {Panel, Modal, Button, Table} from 'react-bootstrap'
 
 const ActivitiesView = React.createClass({
     getDefaultProps: function() {

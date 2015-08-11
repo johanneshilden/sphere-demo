@@ -20,8 +20,9 @@ AppDispatcher.register(function(payload) {
                         });
                     }
                 }
-                if (notification)
+                if (notification) {
                     DataStore.emit('notification', notification);
+                }
             }
             break;
         case 'customer-activity':
@@ -29,31 +30,67 @@ AppDispatcher.register(function(payload) {
             if ('success' !== response.status) 
                 return;
             var activity = payload.activity;
-            if (!activity.hasOwnProperty('_links'))
-                activity['_links'] = {};
-            if (response.hasOwnProperty('data') && response.data.hasOwnProperty('_links') && response.data['_links'].hasOwnProperty('self')) {
-                activity['_links']['resource'] = response.data['_links']['self'];
-            } else if (response.hasOwnProperty('command') && response.command.hasOwnProperty('up') && response.command.up.hasOwnProperty('resource')) {
-                activity['_links']['resource'] = {
-                    href: response.command.up.resource
-                };
-            }
-            var response = DataStore.invokeCommand({
+            activity.resource = payload.command.resource;
+            var _response = DataStore.invokeCommand({
                 method   : 'POST',
                 resource : 'activities',
                 payload  : activity
             });
-            if ('success' === response.status) {
+            if ('success' === _response.status) {
+                if ('POST' === payload.command.method) {
+                    var links = payload.command.payload['_links'],
+                        item  = links['self'].href;
+                    links['_parent'] = activity['_links']['self'];
+                    DataStore.invokeCommand({
+                        method   : 'PATCH',
+                        resource : item,
+                        payload  : { '_links': links }
+                    });
+                }
                 DataStore.emit('change');
                 DataStore.emit('customer-activity-register');
                 var notification = payload.notification;
-                if (notification)
+                if (notification) {
                     DataStore.emit('notification', notification);
-                else
+                } else {
                     DataStore.emit('notification', {
                         message : 'The customer activity was successfully registered.',
                         level   : 'success'
                     });
+                }
+            }
+            break;
+        case 'customer-partial-registration':
+            var response = DataStore.invokeCommand({
+                method   : 'POST',
+                resource : 'tasks',
+                payload  : payload.task
+            });
+            if ('success' !== response.status) 
+                return;
+            if (!payload.customer.hasOwnProperty('_links'))
+                payload.customer['_links'] = {};
+            if (response.hasOwnProperty('data') && response.data.hasOwnProperty('_links') && response.data['_links'].hasOwnProperty('self')) {
+                payload.customer['_links']['task'] = response.data['_links']['self'];
+            } else if (response.hasOwnProperty('command') && response.command.hasOwnProperty('up') && response.command.up.hasOwnProperty('task')) {
+                payload.customer['_links']['task'] = { href: response.command.up['task'] };
+            }
+            var response = DataStore.invokeCommand({
+                method   : 'POST',
+                resource : 'registrations',
+                payload  : payload.customer
+            });
+            if ('success' === response.status) {
+                DataStore.emit('change');
+                var notification = payload.notification;
+                if (notification) {
+                    DataStore.emit('notification', notification);
+                } else {
+                    DataStore.emit('notification', {
+                        message : 'The registered customer is pending review.',
+                        level   : 'success'
+                    });
+                }
             }
             break;
         default:

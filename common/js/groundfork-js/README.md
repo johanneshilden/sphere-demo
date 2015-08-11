@@ -2,8 +2,6 @@
 
 JavaScript-client for GroundFork -- a synchronization framework for creating offline-capable web applications.
 
-> under construction
-
 ##### Use cases: 
 
 1. SPAs running in a browser or browser-like environment where local storage is used for device-local persistence.
@@ -13,20 +11,20 @@ JavaScript-client for GroundFork -- a synchronization framework for creating off
 A typical implementation entails three parts:
 
 * a storage,
-* a synchronization endpoint, and the
-* offline api.
+* a synchronization endpoint, and 
+* the offline api.
 
 ##### Storage
 
-The device cache. The included, default backend uses the browser's local storage object. 
+A device cache. The default backend uses the browser's local storage object. 
 
 ##### Endpoint
 
-Points to a running [GroundFork Antenna](https://github.com/johanneshilden/groundfork-antenna-postgres) service. The endpoint manages replication and synchronization.
+Points to a running [GroundFork Antenna](https://github.com/johanneshilden/groundfork-antenna-postgres) service. The server handles replication and synchronization.
 
 ##### Api
 
-Application resources are exposed through a client-side REST interface which encapsulates commands into a format suitable for logging. Resources are stored on the device for subsequent synchronization with other devices. 
+Application resources are exposed through a client-side REST interface. Commands are encapsulated in a format suitable for logging ([command pattern](https://sourcemaking.com/design_patterns/command)) and resources are stored on the device for subsequent synchronization with other devices. 
 
 #### Contrived example
 
@@ -53,8 +51,9 @@ var endpoint = new GroundFork.BasicHttpEndpoint({
 });
 
 /*
- * This is how you would interact with application resources. Here we create a new 
- * 'recipe'. The process is the same whether the device is online or offline.
+ * This is how you would interact with application resources. In this example, we 
+ * create a new 'recipe'. Nothing is commited to the server, so there is no network 
+ * activity involved.
  */ 
 
 var recipe = {
@@ -62,7 +61,7 @@ var recipe = {
    ingredients : ['Cottage Cheese', 'Lemon Juice', 'Ginger-Garlic Paste', 'Red Chili Powder']
 };
 
-api.command({
+var response = api.command({
    method   : 'POST'
    resource : 'recipes'
    payload  : recipe
@@ -72,8 +71,9 @@ api.command({
 
 /*
  * At any point, We can sync our local timeline with other nodes. This requires a 
- * Groundfork Antenna server to be set up and running. 'target-node' refers to another
- * device registered with the service.
+ * Groundfork Antenna server to be set up and running. 'target-node' refers to a
+ * device registered with the service. (A device may also sync against itself.)
+ * This step requires network connectivity.
  */ 
 
 endpoint.sync(['target-node']);
@@ -81,16 +81,20 @@ endpoint.sync(['target-node']);
 
 ## Storage
 
+### BrowserStorage
+
 ```javascript
 var store = new GroundFork.BrowserStorage({
     namespace: 'myApp'
 });
 ```
-### Config keys
+
+#### Config keys
 
 | Property            | Default   | Required? | Type      |  Description  |
 |---------------------|-----------|-----------|-----------|----|
 | namespace           |           | required  | string    | A prefix used for local storage key names. |
+| useCompression      | true      |           | boolean   | Data is stored in compressed format. (Local storage is limited to 5MB in most browsers.) |
 
 ## Api
 
@@ -98,7 +102,7 @@ var store = new GroundFork.BrowserStorage({
 var api = new GroundFork.Api(config);
 ```
 
-### Config keys
+#### Config keys
 
 | Property            | Default   | Required? | Type     | Description  |
 |---------------------|-----------|-----------|----------|---|
@@ -107,11 +111,12 @@ var api = new GroundFork.Api(config);
 | storage             |           | required  | object   | A `GroundFork.Storage` instance. |
 | onBatchJobStart     |           |           | function |   |
 | onBatchJobComplete  |           |           | function |   |
-| interval            | 15        |           | number   | A timeout interval used to avoid busy looping during sync batch jobs. |
+| useProxy            | true      |           | boolean  | If true, local data is copied to memory during batch operations for better performance. |
+| interval            | 15        |           | number   | A timeout interval used to avoid busy looping during post-sync batch jobs. |
 
 ##### Overriding route patterns
 
-```
+```javascript
 var api = new GroundFork.Api({
     storage  : store,
     patterns : {
@@ -122,21 +127,21 @@ var api = new GroundFork.Api({
 });
 ```
 
-### Methods
+#### Methods
 
-#### command (request)
+##### command (request)
 
-#### isBusy ()
+##### isBusy ()
 
-#### syncPoint ()
+##### syncPoint ()
 
-#### setSyncPoint (timestamp)
+##### setSyncPoint (timestamp)
 
-#### log ()
+##### log ()
 
-> #### Convenience request methods
+#### Convenience request methods
 
-#### post (resource, payload, options)
+##### post (resource, payload, options)
 
 ###### Example:
 
@@ -159,11 +164,11 @@ api.post('comments', comment, {
 });
 ```
 
-#### put (resource, payload, options)
+##### put (resource, payload, options)
 
-#### patch (resource, payload)
+##### patch (resource, payload)
 
-#### delete (resource)
+##### delete (resource)
 
 ## Endpoint
 
@@ -171,7 +176,7 @@ api.post('comments', comment, {
 var endpoint = new GroundFork.BasicHttpEndpoint(config);
 ```
 
-### Config keys
+#### Config keys
 
 | Property            | Default                 | Required? | Type      | Description  |
 |---------------------|-------------------------|-----------|-----------|---|
@@ -184,14 +189,14 @@ var endpoint = new GroundFork.BasicHttpEndpoint(config);
 | url                 | `'http://localhost:3333'` |           | string    |   |
 | requestHandler      | `ajaxRequestHandler` |           | function  | See below. | 
 
-### Request handler
+#### Request handler
 
 ##### Available options:
 
 * `BasicHttpEndpoint.ajaxRequestHandler`
 * `BasicHttpEndpoint.nodeRequestHandler`
 
-Default is to use jQuery's `$.ajax` api. For node implementations, use `BasicHttpEndpoint.nodeRequestHandler` instead.
+Default is to use jQuery's `$.ajax` api. For node.js implementations, use `BasicHttpEndpoint.nodeRequestHandler` instead.
 
 ##### Example:
 
@@ -204,6 +209,8 @@ var endpoint = new GroundFork.BasicHttpEndpoint({
 });
 ```
 
-### Methods
+#### Methods
 
-#### sync (target, onSuccess, onError, onProgress)
+##### sync (target, onSuccess, onError, onProgress)
+
+##### syncPoint ()

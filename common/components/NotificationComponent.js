@@ -75,8 +75,8 @@ const notificationStyles = {
             cursor          : 'pointer',
             borderRadius    : '0',
             fontSize        : '16px',
-            border          : 'none',
-            borderTopWidth  : '0',
+            border          : '1px solid green',
+            borderTopWidth  : '1',
             margin          : '10px 0 0',
             padding         : '16px 20px',
             display         : 'block',
@@ -99,8 +99,8 @@ const notificationStyles = {
         },
     
         success: {
-            borderColor     : '#d0ddbe',
-            borderTopColor  : '#e0f1e9',
+            borderColor     : '#bbe2d5',
+            borderTopColor  : '#bbe2d5',
             backgroundColor : '#f1f9f7',
             color           : '#1d9d74'
         },

@@ -1,109 +1,74 @@
-import Bootstrap           from 'react-bootstrap'
-import Griddle             from 'griddle-react'
-import React               from 'react'
-import TimeAgo             from 'react-timeago'
-import DataStore           from '../../store/DataStore'
-import BootstrapPager      from '../BootstrapPager'
-import OrdersEntityView    from './OrdersEntityView'
+import Bootstrap                        from 'react-bootstrap'
+import Griddle                          from 'griddle-react'
+import React                            from 'react'
+import TimeAgo                          from 'react-timeago'
+import DataStore                        from '../../store/DataStore'
 
-import {Panel, TabPane, TabbedArea, Modal} from 'react-bootstrap'
+import {Modal, Panel, TabPane, TabbedArea, Table} from 'react-bootstrap'
 
 const OrdersView = React.createClass({
-    getInitialState: function() {
-        return {
-            activeOrder  : null,
-            order        : null
-        }
-    },
-    getDefaultProps: function() {
-        return {
-            resultsPerPage : 8,
-            showCustomer   : true
-        }
-    },
-    closeModal: function() {
-        this.setState({activeOrder: null})
-    },
-    viewOrder: function(row) {
-        let order = DataStore.getItem(row.props.data.id)
-        if (order) {
-            order.items.forEach(item => {
-                item.product = item['_embedded']['product']
-            })
-            this.setState({activeOrder: order})
-        }
-    },
     render: function() {
-        const metadata = [
-            {
-                'columnName'      : 'customerName', 
-                'displayName'     : 'Customer'
-            },
-            {
-                'columnName'      : 'created',
-                'displayName'     : 'Created',
-                'customComponent' : React.createClass({
-                    render: function() {
-                        return (
-                            <TimeAgo 
-                              date={Number(this.props.rowData.created)} 
-                              formatter={DataStore.timeFormatter} />
-                        )
-                    }
-                })
-            },
-            {
-                'columnName'      : 'itemCount', 
-                'displayName'     : '# of items'
-            },
-            {
-                'columnName'      : 'user', 
-                'displayName'     : 'User'
-            },
-            {
-                'columnName'      : 'total', 
-                'displayName'     : 'Order total'
-            }
-        ]
-
-        let columns = ['created', 'itemCount', 'user', 'total']
-
-        if (true === this.props.showCustomer) {
-            columns.unshift('customerName')
+        let order = this.props.order
+        if (!order || !order.items) {
+            return (
+                <span>Error: Invalid or missing record.</span>
+            )
         }
-
+        let i = 0
+        let items = order.items.map(item => {
+            return (
+                <tr key={i++}>
+                    <td>{item.product.name}</td>
+                    <td><span style={{float: 'right'}}>&times;</span>{item.quantity}</td>
+                    <td>{item.itemPrice}</td>
+                    <td>{item.price}</td>
+                </tr>
+            )
+        })
         return (
             <div>
-                <Modal 
-                  onHide = {this.closeModal}
-                  show   = {!!this.state.activeOrder}>
-                    <Modal.Header 
-                      closeButton 
-                      onHide={this.closeModal}>
-                        <Modal.Title>
-                            Order details
-                        </Modal.Title>
-                    </Modal.Header>
-                    <Modal.Body>
-                        <OrdersEntityView order={this.state.activeOrder} />
-                    </Modal.Body>
-                </Modal>
-                <Griddle 
-                  results                 = {this.props.orders}
-                  showFilter              = {true}
-                  resultsPerPage          = {this.props.resultsPerPage}
-                  columnMetadata          = {metadata}
-                  useGriddleStyles        = {false}
-                  onRowClick              = {this.viewOrder}
-                  initialSort             = 'created'
-                  initialSortAscending    = {false}
-                  useCustomPagerComponent = {true}
-                  customPagerComponent    = {BootstrapPager}
-                  tableClassName          = 'table table-bordered table-select'
-                  columns                 = {columns} />
+                <Table striped bordered fill>
+                    <col width={130} />
+                    <col />
+                    <tbody>
+                        <tr>
+                            <td><b>Customer</b></td>
+                            <td>{order.customerName}</td>
+                        </tr>
+                        <tr>
+                            <td><b>Created</b></td>
+                            <td>
+                                <TimeAgo 
+                                  date      = {Number(order.created)} 
+                                  formatter = {DataStore.timeFormatter} />
+                            </td>
+                        </tr>
+                    </tbody>
+                </Table>
+                <Table striped bordered fill>
+                    <thead>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Item price</th>
+                        <th>Price</th>
+                    </thead>
+                    <tbody>
+                        {items}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colSpan={3}>
+                                <b>Order total:</b>
+                            </td>
+                            <td>
+                                {order.total}
+                            </td>
+                        </tr>
+                    </tfoot>
+                </Table>
             </div>
         )
     }
 })
-
+ 
 module.exports = OrdersView

@@ -1,14 +1,18 @@
-var Bootstrap           = require('react-bootstrap');
-var Griddle             = require('griddle-react');
-var React               = require('react');
-var DataStore           = require('../../store/DataStore');
+import React         from 'react'
+import Bootstrap     from 'react-bootstrap'
+import Griddle       from 'griddle-react'
 
-var PerformanceView = React.createClass({
+import {Panel} from 'react-bootstrap'
+
+const PerformanceView = React.createClass({
     render: function() {
         return (
-            <span>performance</span>
-        );
+            <Panel 
+              header  = 'Performance'
+              bsStyle = 'primary'>
+            </Panel>
+        )
     }
-});
+})
 
-module.exports = PerformanceView;
+module.exports = PerformanceView

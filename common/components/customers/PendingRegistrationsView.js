@@ -6,7 +6,7 @@ import AppDispatcher       from '../../dispatcher/AppDispatcher'
 import BootstrapPager      from '../BootstrapPager'
 import DataStore           from '../../store/DataStore'
 
-import {Button, ButtonGroup, DropdownButton, MenuItem, Modal, Panel} from 'react-bootstrap'
+import {Glyphicon, Button, ButtonGroup, DropdownButton, MenuItem, Modal, Panel} from 'react-bootstrap'
 
 const DeleteRegistrationModal = React.createClass({
     confirmDelete: function() {
@@ -51,6 +51,11 @@ const DeleteRegistrationModal = React.createClass({
 })
 
 const PendingRegistrationsView = React.createClass({
+    getDefaultProps: function() {
+        return {
+            showActions : true
+        }
+    },
     getInitialState: function() {
         return {
             data         : [],
@@ -64,16 +69,23 @@ const PendingRegistrationsView = React.createClass({
             regHref      : href
         })
     },
-    finalizeRegistration: function(href) {
-        DataStore.emit('registration-finalize', href)
+    finalizeRegistration: function(resource) {
+        let partial = DataStore.getItem(resource)
+        if (partial) {
+            AppDispatcher.dispatch({
+                actionType : 'registration-finalize',
+                customer   : partial,
+                template   : resource
+            })
+        }
     },
     closeModal: function() {
         this.setState({modalVisible: false})
     },
     handleRowClick: function(row, event) {
-        if ('TD' === event.target.nodeName) {
-            DataStore.emit('registration-finalize', row.props.data.id)
-        }
+        //if ('TD' === event.target.nodeName) {
+        //    DataStore.emit('registration-finalize', row.props.data.id)
+        //}
     },
     render: function() {
         var self = this
@@ -88,30 +100,44 @@ const PendingRegistrationsView = React.createClass({
                 'displayName'     : '',
                 'customComponent' : React.createClass({
                     render: function() {
-                        return (
-                            <DropdownButton 
-                              className       = 'btn-block'
-                              buttonClassName = 'btn-block'
-                              bsSize          = 'xsmall'
-                              title           = 'Actions'>
-                                <MenuItem 
-                                  onSelect = {() => self.finalizeRegistration(this.props.rowData.id)}
-                                  eventKey = {1}>
-                                    <i className='fa fa-fw fa-pencil'></i>
-                                    Finalize
-                                </MenuItem>
-                                <MenuItem 
-                                  onSelect = {() => self.confirmDeleteRegistration(this.props.rowData.id)}
-                                  eventKey = {2}>
-                                    <i className='fa fa-fw fa-remove'></i>
-                                    Delete
-                                </MenuItem>
-                            </DropdownButton>
-                        )
+                        if (true === self.props.showActions) {
+                            return (
+                                <DropdownButton 
+                                  className       = 'btn-block'
+                                  buttonClassName = 'btn-block'
+                                  bsSize          = 'xsmall'
+                                  title           = 'Actions'>
+                                    <MenuItem 
+                                      onSelect = {() => self.finalizeRegistration(this.props.rowData.id)}
+                                      eventKey = {1}>
+                                        <i className='fa fa-fw fa-pencil'></i>
+                                        Finalize
+                                    </MenuItem>
+                                    <MenuItem 
+                                      onSelect = {() => self.confirmDeleteRegistration(this.props.rowData.id)}
+                                      eventKey = {2}>
+                                        <i className='fa fa-fw fa-remove'></i>
+                                        Delete
+                                    </MenuItem>
+                                </DropdownButton>
+                            )
+                        } else {
+                            return (
+                                <Button
+                                  onClick = {() => {
+                                      window.location.hash = this.props.rowData.id + '/edit' 
+                                  }}
+                                  bsSize  = 'xsmall'>
+                                    <Glyphicon glyph='pencil' />
+                                    Edit
+                                </Button>
+                            )
+                        }
                     }
                 })
             }
         ]
+
         return (
             <div>
                 <DeleteRegistrationModal 

@@ -2,6 +2,7 @@
 var $          = require('jquery');
 var UrlPattern = require('url-pattern');
 var request    = require('request');
+var LZString   = require('lz-string');
 
 var _localStorage;
 
@@ -239,6 +240,7 @@ function Api(config) {
     this._messageLog         = [];
     this._debugMode          = false;
     this._interval           = 15;
+    this._useProxy           = true;
 
     if (config) {
         if (true === config.debugMode) {
@@ -258,6 +260,9 @@ function Api(config) {
         }
         if ('number' === typeof config.interval) {
             this._interval = config.interval;
+        }
+        if ('boolean' === typeof config.useProxy) {
+            this._useProxy = config.useProxy;
         }
     }
 
@@ -400,7 +405,7 @@ StorageProxy.prototype.deploy = function() {
     var keys = this._storage.keys();
     for (var i = 0; i < keys.length; i++) {
         var key = keys[i];
-        if (!this._data.hasOwnProperty(key) && key.indexOf('_') != 0) {
+        if (!this._data.hasOwnProperty(key) && key.indexOf('_') !== 0) {
             this._storage.removeItem(key);
         }
     }
@@ -469,15 +474,22 @@ Api.prototype.batchRun = function(batch, onComplete, onProgress) {
     if (this._onBatchJobStart) {
         this._onBatchJobStart(); 
     }
-    var messages = [],
-        memstore = new StorageProxy(this._storage),
-        len = batch.length;
+    if (true === this._debugMode) {
+        console.log(JSON.stringify(batch, null, 3));
+    }
+    var messages = [];
+    var memstore = (true === this._useProxy 
+            && typeof localStorage !== 'undefined' 
+            && localStorage !== null) ? new StorageProxy(this._storage) : null;
+            // Only use storage proxy in browser environments
+    var len = batch.length;
     var processOne = function() {
         if ('function' === typeof onProgress) {
             onProgress(len-batch.length, len);
         }
         if (!batch.length) {
-            memstore.deploy();
+            if (memstore)
+                memstore.deploy();
             this._busyStatus = false;
             if (this._onBatchJobComplete) {
                 this._onBatchJobComplete(); 
@@ -490,7 +502,7 @@ Api.prototype.batchRun = function(batch, onComplete, onProgress) {
         if (true == this._debugMode)
             console.log('<' + batch.length + '>');
         var req = batch[0],
-            response = this._route(req, memstore);
+            response = this._route(req, memstore ? memstore : this._storage);
         if (true == this._debugMode)
             console.log(response);
         if (response.status === ApiResponse.TYPE_ERROR) {
@@ -588,20 +600,34 @@ Api.prototype.takeLog = function(items) {
     return log;
 }
 
-function parseWithDefault(data, _default) {
+function parseWithDefault(data, _default, useCompression) {
     try {
+        if (true === useCompression) {
+            var decompressed = LZString.decompress(data);
+            if ('null' === decompressed) {
+                console.log('parseWithDefault: LZString.decompress returned "null".');
+                return _default;
+            }
+            return JSON.parse(decompressed);
+        } 
         return JSON.parse(data);
     } catch (e) {
         return _default;
     }
-};
+}
 
 function BrowserStorage(config) {
     if (!config) {
         throw 'No configuration object provided.';
     }
+
+    this._useCompression = true;
+
     if ('string' === typeof config.namespace) {
         this.namespace = config.namespace;
+    }
+    if ('boolean' === typeof config.useCompression) {
+        this._useCompression = config.useCompression;
     }
 }
 
@@ -615,10 +641,12 @@ BrowserStorage.prototype.updateCollectionWith = function(key, update) {
             "count": 0
         };
     collection['_links'][key] = [];
-    if (cached) 
-        collection = parseWithDefault(cached, collection);
+    if (cached) {
+        collection = parseWithDefault(cached, collection, this._useCompression);
+    }
     update(collection);
-    _localStorage.setItem(_key, JSON.stringify(collection));
+    var value = JSON.stringify(collection);
+    _localStorage.setItem(_key, true === this._useCompression ? LZString.compress(value) : value);
 };
 
 BrowserStorage.prototype.embed = function(obj, link) {
@@ -648,12 +676,13 @@ BrowserStorage.prototype.namespaced = function(str) {
 };
 
 BrowserStorage.prototype.insertItem = function(key, value) {
-    _localStorage.setItem(this.namespaced(key), JSON.stringify(value));
+    var str = JSON.stringify(value);
+    _localStorage.setItem(this.namespaced(key), true === this._useCompression ? LZString.compress(str) : str);
 };
 
 BrowserStorage.prototype.getItem = function(key) {
     var cached = _localStorage.getItem(this.namespaced(key));
-    return parseWithDefault(cached, null);
+    return parseWithDefault(cached, null, this._useCompression);
 };
 
 BrowserStorage.prototype.removeItem = function(key) {
@@ -721,9 +750,19 @@ BrowserStorage.prototype.getSelfHref = function(obj) {
 BrowserStorage.prototype.keys = function() {
     var keys = [],
         len = this.namespace.length + 1;
-    for (var key in _localStorage) {
-        if (0 == key.indexOf(this.namespace)) {
-            keys.push(key.substr(len));
+    if (typeof localStorage === 'undefined' || localStorage === null) {
+        var storageKeys = _localStorage.keys;
+        for (var i = 0; i < storageKeys.length; i++) {
+            var key = storageKeys[i];
+            if (0 == key.indexOf(this.namespace)) {
+                keys.push(key.substr(len));
+            }
+        }
+    } else {
+        for (var key in _localStorage) {
+            if (0 == key.indexOf(this.namespace)) {
+                keys.push(key.substr(len));
+            }
         }
     }
     return keys;
@@ -789,7 +828,7 @@ function BasicHttpEndpoint(config) {
 
 }
 
-BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgress) {
+BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgress, debugScript) {
     if (true == this._device.isBusy()) {
         return false;
     }
@@ -835,6 +874,9 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
                 script.unshift(log[i].down);
             for (var i = size; i < log.length; i++) 
                 script.push(log[i].up);
+            if ('function' === typeof debugScript) {
+                debugScript(script);
+            }
             this._device.batchRun(script, function(messages) {
                 if ('function' === typeof onSuccess) {
                     onSuccess(messages, resp);
@@ -917,7 +959,11 @@ BasicHttpEndpoint.nodeRequestHandler = function(_request, onSuccess, onError) {
         if (err) {
             onError(err);
         } else {
-            onSuccess(resp);
+            if (('' + httpResponse.statusCode).match(/^2\d\d$/)) {
+                onSuccess(resp);
+            } else {
+                onError(httpResponse);
+            }
         }
     }.bind(this)).auth(this._clientKey, this._clientSecret, true);
 }

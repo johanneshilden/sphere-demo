@@ -1,7 +1,7 @@
-var assign       = require('object-assign')
-var EventEmitter = require('events')
+import assign       from 'object-assign'
+import EventEmitter from 'events'
 
-var FormItemStore = assign({}, EventEmitter.prototype, {
+const FormItemStore = assign({}, EventEmitter.prototype, {
     value : '',
     state : null,
     hint  : null,

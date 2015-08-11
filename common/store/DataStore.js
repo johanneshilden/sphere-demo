@@ -91,6 +91,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
             var item = this.store.getItem(links[i].href);
             if (item) {
                 assign(item, StoreItem.prototype);
+                item.id = item.getLink('self');
                 var _item = {};
                 for (var key in item) {
                     if ('_embedded' !== key) 
@@ -121,6 +122,7 @@ var DataStore = assign({}, EventEmitter.prototype, {
             var item = this.store.getItem(target.href);
             if (item) {
                 assign(item, StoreItem.prototype);
+                item.id = item.getLink('self');
                 if (!obj.hasOwnProperty('_embedded')) 
                     obj['_embedded'] = {};
                 var _item = {};
