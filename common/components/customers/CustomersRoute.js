@@ -24,8 +24,8 @@ const CustomersRoute = React.createClass({
             this.setState({
                 customer   : customer,
                 activities : activities.map(item => {
-                    if (item.resource) {
-                        item._resource = item.getLink(item.resource)
+                    if (item.resourceType) {
+                        item._resource = item.getLink(item.resourceType)
                     }
                     return item
                 }),

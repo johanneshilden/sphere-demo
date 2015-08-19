@@ -23,34 +23,44 @@ const StockCollection = React.createClass({
     render: function() {
         const stockMetadata = [
             {
-                'columnName'  : 'productName',
-                'displayName' : 'Product'
+                'columnName'      : 'productName',
+                'displayName'     : 'Product'
             }, 
             {
-                'columnName'  : 'actual',
-                'displayName' : 'Actual qty.'
+                'columnName'      : 'actual',
+                'displayName'     : 'Actual qty.'
             }, 
             {
-                'columnName'  : 'available',
-                'displayName' : 'Available qty.'
+                'columnName'      : 'available',
+                'displayName'     : 'Available qty.'
             }
         ]
         const activityMetadata = [
             { 
-                'columnName'  : 'action',
-                'displayName' : 'Action'
+                'columnName'      : 'action',
+                'displayName'     : 'Action'
             },
             {
-                'columnName'  : 'productName',
-                'displayName' : 'Product'
+                'columnName'      : 'productName',
+                'displayName'     : 'Product'
             },
             {
-                'columnName'  : 'type',
-                'displayName' : 'Quantity changed'
+                'columnName'      : 'type',
+                'displayName'     : 'Quantity changed'
             },
             {
-                'columnName'  : 'quantity',
-                'displayName' : 'Change incurred'
+                'columnName'      : 'quantity',
+                'displayName'     : 'Change incurred',
+                'customComponent' : React.createClass({
+                    render: function() {
+                        let qty = this.props.rowData['quantity']
+                        return (
+                            <span>
+                                {qty <= 0 ? qty : ('+' + qty)}
+                            </span>
+                        )
+                    }
+                })
             }
         ]
         return (

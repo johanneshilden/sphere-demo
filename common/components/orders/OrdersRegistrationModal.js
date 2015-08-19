@@ -6,7 +6,7 @@ import AppDispatcher         from '../../dispatcher/AppDispatcher'
 import {OrdersRegistrationForm} from './OrdersForm'
 import {Modal} from 'react-bootstrap'
 
-const OrderRegistrationModal = React.createClass({
+const OrdersRegistrationModal = React.createClass({
     componentDidMount: function() {
         AppDispatcher.dispatch({
             actionType : 'order-form-init',
@@ -32,4 +32,4 @@ const OrderRegistrationModal = React.createClass({
     }
 })
 
-module.exports = OrderRegistrationModal
+module.exports = OrdersRegistrationModal

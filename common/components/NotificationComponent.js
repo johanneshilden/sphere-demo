@@ -114,9 +114,9 @@ const notificationStyles = {
     
         warning: {
             borderColor     : '#ecd9ab',
-            borderTopColor  : defaultColors.warning,
+            borderTopColor  : '#ecd9ab',
             backgroundColor : '#f9f6f0',
-            color           : '#5a5343'
+            color           : '#dc861a'
         },
     
         info: {
@@ -188,8 +188,8 @@ const notificationStyles = {
         },
 
         warning: {
-            color           : '#f9f6f0',
-            backgroundColor : '#e1cfac'
+            color           : '#dc861a',
+            backgroundColor : 'transparent'
         },
 
         info: {
@@ -251,8 +251,8 @@ const NotificationComponent = React.createClass({
     render: function() {
         return (
             <NotificationSystem 
-              style={notificationStyles}
-              ref='notifications' />
+              style = {notificationStyles}
+              ref   = 'notifications' />
         )
     }
 })

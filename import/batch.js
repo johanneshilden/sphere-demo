@@ -167,7 +167,7 @@ fs.readFile('install.json', 'utf8', function (err, data) {
             /*  Insert a max. number of customers */
             if ('customers' === key) {
                 count++;
-                if (count > 1000) 
+                if (count > 100)   // 1000
                     continue;
             }
 

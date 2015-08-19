@@ -18,9 +18,19 @@ const OrdersEditRoute = React.createClass({
             order.items.forEach(item => {
                 item.product = item['_embedded']['product']
             })
+            let orderItems = []
+            if (order.items) {
+                order.items.forEach(item => {
+                    orderItems.push({
+                        id  : item['_links']['product'].href,
+                        qty : item.quantity
+                    })
+                })
+            }
             this.setState({
                 order    : order,
-                customer : order.getEmbedded('customer')
+                customer : order.getEmbedded('customer'),
+                items    : orderItems
             })
         }
     },
@@ -57,8 +67,9 @@ const OrdersEditRoute = React.createClass({
                     </li>
                 </ol>
                 <OrdersEditForm 
-                  order    = {this.state.order} 
-                  customer = {this.state.customer} />
+                  order            = {this.state.order} 
+                  initialSelection = {this.state.items}
+                  customer         = {this.state.customer} />
             </Panel>
         )
     }

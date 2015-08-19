@@ -65,6 +65,16 @@ var DataStore = assign({}, EventEmitter.prototype, {
         return item;
     },
 
+    runTransaction: function(commands) {
+        for (var i = 0; i < commands.length; i++) {
+            var command = commands[i];
+            if ('POST' === command.method) {
+                command.payload._local = true;
+            }
+        }
+        return this.api.run(commands);
+    },
+
     invokeCommand: function(command) {
         if ('POST' === command.method) {
             command.payload._local = true;

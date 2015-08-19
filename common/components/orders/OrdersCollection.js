@@ -13,13 +13,14 @@ const OrdersCollection = React.createClass({
     getInitialState: function() {
         return {
             activeOrder  : null,
-            order        : null
+            order        : null,
+            activeKey    : 1
         }
     },
     getDefaultProps: function() {
         return {
             resultsPerPage : 8,
-            showCustomer   : true
+            tabbedMode     : true
         }
     },
     closeModal: function() {
@@ -33,6 +34,9 @@ const OrdersCollection = React.createClass({
             })
             this.setState({activeOrder: order})
         }
+    },
+    handleSelect: function(key) {
+        this.setState({key: key})
     },
     render: function() {
         const metadata = [
@@ -69,7 +73,7 @@ const OrdersCollection = React.createClass({
 
         let columns = ['created', 'itemCount', 'user', 'total']
 
-        if (true === this.props.showCustomer) {
+        if (true === this.props.tabbedMode) {
             columns.unshift('customerName')
         }
 
@@ -89,19 +93,69 @@ const OrdersCollection = React.createClass({
                         <OrdersView order={this.state.activeOrder} />
                     </Modal.Body>
                 </Modal>
-                <Griddle 
-                  results                 = {this.props.orders}
-                  showFilter              = {true}
-                  resultsPerPage          = {this.props.resultsPerPage}
-                  columnMetadata          = {metadata}
-                  useGriddleStyles        = {false}
-                  onRowClick              = {this.viewOrder}
-                  initialSort             = 'created'
-                  initialSortAscending    = {false}
-                  useCustomPagerComponent = {true}
-                  customPagerComponent    = {BootstrapPager}
-                  tableClassName          = 'table table-bordered table-select'
-                  columns                 = {columns} />
+                {this.props.tabbedMode ? (
+                    <Panel 
+                      className = 'panel-fill'
+                      bsStyle   = 'primary'
+                      header    = 'Orders'>
+                        <TabbedArea fill 
+                          animation = {false}
+                          activeKey = {this.state.key}
+                          onSelect  = {this.handleSelect}>
+                            <TabPane 
+                              eventKey = {1}
+                              tab      = 'Orders'>
+                                <Panel>
+                                    <Griddle 
+                                      results                 = {this.props.orders}
+                                      showFilter              = {true}
+                                      resultsPerPage          = {this.props.resultsPerPage}
+                                      columnMetadata          = {metadata}
+                                      useGriddleStyles        = {false}
+                                      onRowClick              = {this.viewOrder}
+                                      initialSort             = 'created'
+                                      initialSortAscending    = {false}
+                                      useCustomPagerComponent = {true}
+                                      customPagerComponent    = {BootstrapPager}
+                                      tableClassName          = 'table table-bordered table-select'
+                                      columns                 = {columns} />
+                                </Panel>
+                            </TabPane>
+                            <TabPane 
+                              eventKey = {2}
+                              tab      = 'Rejected orders'>
+                                <Panel>
+                                    <Griddle 
+                                      results                 = {this.props.rejected}
+                                      showFilter              = {true}
+                                      resultsPerPage          = {this.props.resultsPerPage}
+                                      columnMetadata          = {metadata}
+                                      useGriddleStyles        = {false}
+                                      initialSort             = 'created'
+                                      initialSortAscending    = {false}
+                                      useCustomPagerComponent = {true}
+                                      customPagerComponent    = {BootstrapPager}
+                                      tableClassName          = 'table table-bordered table-select'
+                                      columns                 = {columns} />
+                                </Panel>
+                            </TabPane>
+                        </TabbedArea>
+                    </Panel>
+                ) : (
+                    <Griddle 
+                      results                 = {this.props.orders}
+                      showFilter              = {true}
+                      resultsPerPage          = {this.props.resultsPerPage}
+                      columnMetadata          = {metadata}
+                      useGriddleStyles        = {false}
+                      onRowClick              = {this.viewOrder}
+                      initialSort             = 'created'
+                      initialSortAscending    = {false}
+                      useCustomPagerComponent = {true}
+                      customPagerComponent    = {BootstrapPager}
+                      tableClassName          = 'table table-bordered table-select'
+                      columns                 = {columns} />
+                )}
             </div>
         )
     }

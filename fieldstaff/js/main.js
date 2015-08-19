@@ -34,86 +34,334 @@ import {Route, RouteHandler} from 'react-router'
 import {Badge, Glyphicon, Navbar, Nav, NavItem, CollapsibleNav, MenuItem, DropdownButton} from 'react-bootstrap'
 
 const store = new GroundFork.BrowserStorage({
-    namespace : 'sphere.fieldstaff'
+    useCompression : false,
+    namespace      : 'sphere.fieldstaff'
 })
+
+function getLink(obj, resource) {
+    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty(resource))
+        return null;
+    return obj['_links'][resource].href;
+}
 
 const api = new GroundFork.Api({
     storage            : store,
     debugMode          : true,
-    interval           : 5,
+    interval           : 5, 
+    onSyncComplete     : function(log) {
+        log.forEach(item => {
+            //if ('POST' === item.command.up.method && 'stock-movements' === item.command.up.resource) {
+            //    let move  = item.command.up.payload,
+            //        stock = DataStore.getItem(move['_links']['stock'].href)
+            //    if (stock && stock.available < 0) {
+            //        let order = DataStore.getItem(move['_links']['order'].href)
+            //        AppDispatcher.dispatch({
+            //            actionType : 'command-invoke',
+            //            command    : {
+            //                method   : 'DELETE',
+            //                resource : order.id
+            //            }
+            //        })
+            //        AppDispatcher.dispatch({
+            //            actionType : 'command-invoke',
+            //            command    : {
+            //                method   : 'POST',
+            //                resource : 'orders-rejected',
+            //                payload  : order
+            //            },
+            //            notification: {
+            //                message : 'An order was temporarily rejected due to insufficient stock of one or more products.',
+            //                level   : 'warning'
+            //            }
+            //        })
+            //        order.items.forEach(item => {
+            //            let productId = item['_links']['product'].href,
+            //                product = DataStore.getItem(productId)
+            //            if (product && (stock = product.getLink('stock'))) {
+            //                AppDispatcher.dispatch({
+            //                    actionType : 'command-invoke',
+            //                    command    : {
+            //                        method   : 'POST',
+            //                        resource : 'stock-movements',
+            //                        payload  : {
+            //                            'action'   : 'Order blocked due to insufficient stock.',
+            //                            'type'     : 'available',
+            //                            'created'  : Date.now(),
+            //                            'quantity' : Number(item.quantity),
+            //                            '_links'   : {
+            //                                'order'   : { 'href' : order.id },
+            //                                'stock'   : { 'href' : stock },
+            //                                'product' : { 'href' : productId }
+            //                            }
+            //                        }
+            //                    }
+            //                })
+            //            }
+            //        })
+            //    }
+            //}
+        })
+    },
     patterns           : {
-        'PATCH/stock/:id': function(context, request) {
-            var key = 'stock/' + context.id,
-                item = store.getItem(key),
-                reverse = {}
-            if (item) {
-                var adjustAvailable = Number(request.payload.adjustAvailable),
-                    adjustActual    = Number(request.payload.adjustActual)
-                if (adjustAvailable) {
-                    item.available += adjustAvailable
-                    reverse.adjustAvailable = -adjustAvailable
+        'POST/stock-movements': function(context, request) {
+            let payload   = request.payload,
+                uri       = getLink(payload, 'self'),
+                stock     = getLink(payload, 'stock'),
+                stockItem = this.getItem(stock)
+            api._route({
+                method   : 'PATCH',
+                resource : stock,
+                payload  : {
+                    available : stockItem.available + payload.quantity
                 }
-                if (adjustActual) {
-                    item.actual += adjustActual
-                    reverse.adjustActual = -adjustActual
-                }
-                store.insertItem(key, item)
-                if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('_parent')) {
-                    var product = item['_links']['_parent'].href
-                    store.updateCollectionWith(product, function(collection) {
-                        if (!collection.hasOwnProperty('_links')) 
-                            collection['_links'] = {}
-                        collection['_links']['stock'] = {
-                            'href': key
-                        }
-                        if (!collection.hasOwnProperty('_embedded')) 
-                            collection['_embedded'] = {}
-                        var _item = {}
-                        for (var _key in item) {
-                            if ('_embedded' !== _key) 
-                                _item[_key] = item[_key]
-                        }
-                        collection['_embedded']['stock'] = _item
-                    })
-                }
-            }
-            return {
-                "status" : 'success',
-                "data"   : reverse
-            }
+            }, this)
         },
-        'POST/orders': function(context, request) {
-            let orderItems = request.payload.items
-            if (!orderItems || !orderItems.length)
-                return
-            var stock, product
-            orderItems.forEach(item => {
-                product = DataStore.getItem(item['_links']['product'].href)
-                if (product && (stock = product.getLink('stock'))) {
-                    api.patch(stock, { 
-                        adjustAvailable: -Number(item.quantity)
-                    })
-                    api.post('stock-movements', {
-                        'action'   : 'Order created.',
-                        'type'     : 'available',
-                        'created'  : Date.now(),
-                        'quantity' : -Number(item.quantity),
-                        '_links'   : {
-                            'order'   : request.payload['_links']['self'],
-                            'stock'   : { 'href' : stock },
-                            'product' : { 'href' : product.id }
-                        }
-                    })
+        'DELETE/stock-movements/:id': function(context, request) {
+            let key       = 'stock-movements/' + context.id,
+                move      = this.getItem(key),
+                stock     = getLink(move, 'stock'),
+                stockItem = this.getItem(stock)
+            api._route({
+                method   : 'PATCH',
+                resource : stock,
+                payload  : {
+                    available : stockItem.available - move.quantity
                 }
-            })
+            }, this)
         }
     }
+//        'PUT/orders/:id': function(context, request) {
+//            let key        = 'orders/' + context.id,
+//                order      = this.getItem(key),
+//                payload    = request.payload,
+//                orderItems = payload.items,
+//                movements  = payload['_links']['stock-movements'] || [],
+//                messages   = []
+//            if (!order) {
+//                return { 
+//                    "status"   : 'error',
+//                    "_error"   : "MISSING_KEY", 
+//                    "resource" : key 
+//                }
+//            }
+//            var stock, diffMap = {}
+//            if (order.items) {
+//                order.items.forEach(item => {
+//                    let product = this.getItem(getLink(item, 'product'))
+//                    if (product && (stock = getLink(product, 'stock'))) {
+//                        diffMap[stock] = {
+//                            diff    : item.quantity,
+//                            product : item['_links']['product'] 
+//                        }
+//                    }
+//                })
+//            }
+//            orderItems.forEach(item => {
+//                let product = this.getItem(getLink(item, 'product'))
+//                if (product && (stock = getLink(product, 'stock'))) {
+//                    if (!diffMap.hasOwnProperty(stock)) {
+//                        diffMap[stock] = {
+//                            diff    : 0,
+//                            product : item['_links']['product'] 
+//                        }
+//                    }
+//                    diffMap[stock].diff -= item.quantity
+//                }
+//            })
+//            for (var _key in diffMap) {
+//                let stockItem = this.getItem(_key),
+//                    diff      = diffMap[_key].diff,
+//                    newStock  = stockItem.available + diff
+//                api._route({
+//                    method   : 'PATCH',
+//                    resource : _key,
+//                    payload  : {
+//                        available : newStock
+//                    }
+//                }, this)
+//                if (newStock < 0) {
+//                    messages.push({
+//                        type  : 'stock_availability_exceeded',
+//                        stock : _key,
+//                        order : key
+//                    })
+//                }
+//                if (diff) {
+//                    let resp = api._route({
+//                        method   : 'POST',
+//                        resource : 'stock-movements',
+//                        payload  : {
+//                            'action'   : 'Order edited.',
+//                            'type'     : 'available',
+//                            'created'  : Date.now(),
+//                            'quantity' : diff,
+//                            '_links'   : {
+//                                'order'   : key,
+//                                'stock'   : { 'href' : _key },
+//                                'product' : diffMap[_key].product
+//                            }
+//                        }
+//                    }, this)
+//                    movements.push(resp.data['_links']['self'])
+//                }
+//            }
+//            payload['_links']['stock-movements'] = movements
+//            this.insertItem(key, payload)
+//            var oldLinked = getLink(order, '_collection')
+//            var newLinked = getLink(payload, '_collection')
+//            if (oldLinked !== newLinked) {
+//                if (oldLinked) {
+//                    this.removeFromCollection(oldLinked, key, 'orders')
+//                    this.updateCollectionWith(oldLinked, embedCollection.bind(this, 'orders'))
+//                }
+//                if (newLinked) {
+//                    this.addToCollection(newLinked, key, 'orders')
+//                    this.updateCollectionWith(newLinked, embedCollection.bind(this, 'orders'))
+//                }
+//            }
+//            oldLinked = getLink(order, '_parent')
+//            newLinked = getLink(request.payload, '_parent')
+//            if (oldLinked !== newLinked) {
+//                if (oldLinked) 
+//                    removeFromParent.call(this, oldLinked, 'orders')
+//                if (newLinked) 
+//                    addToParent.call(this, newLinked, key, 'orders')
+//            }
+//            return {
+//                "status" : 'success',
+//                "data"   : order
+//            }
+//        },
+//        'POST/orders': function(context, request) {
+//            let payload    = request.payload,
+//                uri        = getLink(payload, 'self'),
+//                orderItems = payload.items,
+//                movements  = [],
+//                messages   = []
+//            var stock
+//            orderItems.forEach(item => {
+//                let product = this.getItem(getLink(item, 'product'))
+//                if (product && (stock = getLink(product, 'stock'))) {
+//                    let stockItem = this.getItem(stock),
+//                        diff      = -Number(item.quantity),
+//                        newStock  = stockItem.available + diff
+//                    api._route({
+//                        method   : 'PATCH',
+//                        resource : stock,
+//                        payload  : {
+//                            available : newStock
+//                        }
+//                    }, this)
+//                    if (newStock < 0) {
+//                        messages.push({
+//                            type  : 'stock_availability_exceeded',
+//                            stock : stock,
+//                            order : uri
+//                        })
+//                    }
+//                    let resp = api._route({
+//                        method   : 'POST',
+//                        resource : 'stock-movements',
+//                        payload  : {
+//                            'action'   : 'Order created.',
+//                            'type'     : 'available',
+//                            'created'  : Date.now(),
+//                            'quantity' : diff,
+//                            '_links'   : {
+//                                'order'   : uri,
+//                                'stock'   : { 'href' : stock },
+//                                'product' : item['_links']['product'] 
+//                            }
+//                        }
+//                    }, this)
+//                    movements.push(resp.data['_links']['self'])
+//                }
+//            })
+//            payload['_links']['stock-movements'] = movements
+//            this.insertItem(uri, payload);
+//            var linked
+//            if ((linked = getLink(payload, '_collection'))) {
+//                this.addToCollection(linked, uri, 'orders')
+//                this.updateCollectionWith(linked, collection => {
+//                    this.embedCollection('orders', collection)
+//                })
+//            } 
+//            if ((linked = getLink(payload, '_parent'))) {
+//                this.addToParent(linked, uri, 'orders')
+//            }
+//            this.addToCollection('orders', uri)
+//            return {
+//                "status"   : 'success',
+//                "data"     : payload,
+//                "messages" : messages
+//            }
+//        },
+//        'DELETE/orders/:id': function(context, request) {
+//            let key      = 'orders/' + context.id,
+//                order    = this.getItem(key)
+//            if (!order) {
+//                return { 
+//                    "status"   : 'error',
+//                    "_error"   : "MISSING_KEY", 
+//                    "resource" : key 
+//                }
+//            }
+//            if (order['_links']['activities']) {
+//                api._route({
+//                    method   : 'DELETE',
+//                    resource : order['_links']['activities'].href
+//                }, this)
+//            }
+//            if (order['_links']['stock-movements']) {
+//                order['_links']['stock-movements'].forEach(item => {
+//                    api._route({
+//                        method   : 'DELETE',
+//                        resource : item.href
+//                    }, this)
+//                })
+//            }
+//            var stock
+//            if (order.items) {
+//                order.items.forEach(item => {
+//                    let product = this.getItem(getLink(item, 'product'))
+//                    if (product && (stock = getLink(product, 'stock'))) {
+//                        let stockItem = this.getItem(stock),
+//                            newStock  = stockItem.available + Number(item.quantity)
+//                        api._route({
+//                            method   : 'PATCH',
+//                            resource : stock,
+//                            payload  : {
+//                                available : newStock
+//                            }
+//                        }, this)
+//                    }
+//                })
+//            }
+//            var linked
+//            this.removeItem(key)
+//            if ((linked = getLink(order, '_collection'))) {
+//                this.removeFromCollection(linked, key, 'orders');
+//                this.updateCollectionWith(linked, collection => {
+//                    this.embedCollection('orders', collection)
+//                })
+//            } 
+//            if ((linked = getLink(order, '_parent'))) {
+//                this.removeFromParent(linked, 'orders')
+//            }
+//            this.removeFromCollection('orders', key);
+//            return {
+//                "status"   : 'success',
+//                "resource" : 'orders',
+//                "data"     : order
+//            }
+//        }
+//    }
 })
 
 const endpoint = new GroundFork.BasicHttpEndpoint({
     api               : api,
     url               : 'http://agile-oasis-7393.herokuapp.com/',
-//    url               : 'http://localhost:3333/',
+   //url    : 'http://localhost:3333/',
     clientKey         : 'fieldstaff-user1',
     clientSecret      : 'fieldstaff'
 })
@@ -401,3 +649,121 @@ Router.run(routes, Router.HashLocation, (Root) => {
         document.getElementById('main')
     )
 })
+
+// //-------------
+// 
+// api.command({
+//     "method"   : "POST",
+//     "resource" : "orders",
+//     "payload"  : {
+//         "created": 1439491210099,
+//         "customerName": "Teacher Shop",
+//         "items": [
+//           {
+//             "quantity": 23,
+//             "_embedded": {
+//               "product": {
+//                 "unitSize": "60x100g",
+//                 "_links": {
+//                   "prices": {
+//                     "href": "prices/_94S0"
+//                   },
+//                   "self": {
+//                     "href": "products/_94S0"
+//                   },
+//                   "stock": {
+//                     
+//                   }
+//                 },
+//                 "name": "Frozen Acai Energiser",
+//                 "sku": "001acaie",
+//                 "description": "Not him old music think his found enjoy merry. Listening acuteness dependent at or an. Apartments thoroughly unsatiable terminated how themselves. She are ten hours wrong walls stand early. Domestic perceive on an ladyship extended received do. Why jennings our whatever his learning perceive. Is against no he without subject. Bed connection unreserved preference partiality not unaffected. Years merit trees so think in hoped we as."
+//               }
+//             },
+//             "_links": {
+//               "product": {
+//                 "href": "products/_94S0"
+//               }
+//             },
+//             "price": 300,
+//             "itemPrice": 100
+//           }
+//         ],
+//         "_embedded": {
+//           "customer": {
+//             "phone": 25562440128,
+//             "area": "Kinondoni",
+//             "tin": "58-12976962",
+//             "address": "Temboni, Saranga",
+//             "_links": {
+//               "activities": [
+//                 {
+//                   "href": "activities/_yPfZ"
+//                 },
+//                 {
+//                   "href": "activities/_eDsg"
+//                 },
+//                 {
+//                   "href": "activities/_Z8I6"
+//                 },
+//                 {
+//                   "href": "activities/_WaTj"
+//                 },
+//                 {
+//                   "href": "activities/_YwFr"
+//                 },
+//                 {
+//                   "href": "activities/_xzUP"
+//                 }
+//               ],
+//               "self": {
+//                 "href": "customers/_94S0"
+//               },
+//               "orders": [
+//                 {
+//                   "href": "orders/_yPfZ"
+//                 },
+//                 {
+//                   "href": "orders/_eDsg"
+//                 },
+//                 {
+//                   "href": "orders/_Z8I6"
+//                 },
+//                 {
+//                   "href": "orders/_WaTj"
+//                 },
+//                 {
+//                   "href": "orders/_YwFr"
+//                 },
+//                 {
+//                   "href": "orders/_xzUP"
+//                 }
+//               ]
+//             },
+//             "name": "Teacher Shop",
+//             "priceCategory": "Retail",
+//             "position": {
+//               "latitude": -6.78725,
+//               "longitude": 39.137914
+//             }
+//           }
+//         },
+//         "user": "Demo user",
+//         "_links": {
+//           "_collection": {
+//             "href": "customers/_94S0"
+//           },
+//           "customer": {
+//             "href": "customers/_94S0"
+//           },
+//           "self": {
+//             "href": "orders/_O4cZ"
+//           },
+//           "_parent": {
+//             "href": "activities/_O4cZ"
+//           }
+//         },
+//         "total": 300,
+//         "itemCount": 3
+//       }
+// })

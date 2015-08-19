@@ -32,6 +32,10 @@ var ApiResponse = {
 function embedCollection(resource, collection) {
     var links = collection['_links'][resource],
         items = [];
+    if (!links) {
+        console.log('embedCollection: Collection has no link to resource \'' + resource + '\'.');
+        return;
+    }
     for (var i = 0; i < links.length; i++) {
         var item = this.getItem(links[i].href);
         if (item) {
@@ -214,6 +218,10 @@ var defaultPatterns = {
 };
 
 function setSelfHref(obj, uri) {
+    if (!obj) {
+        console.log('setSelfHref: obj is ' + obj + '.');
+        return;
+    }
     if (!obj.hasOwnProperty('_links')) {
         obj['_links'] = {"self": null};
     }
@@ -257,6 +265,12 @@ function Api(config) {
         }
         if ('function' === typeof config.onBatchJobComplete) {
             this._onBatchJobComplete = config.onBatchJobComplete;
+        }
+        if ('function' === typeof config.onSyncStart) {
+            this._onSyncStart = config.onSyncStart;
+        }
+        if ('function' === typeof config.onSyncComplete) {
+            this._onSyncComplete = config.onSyncComplete;
         }
         if ('number' === typeof config.interval) {
             this._interval = config.interval;
@@ -455,6 +469,18 @@ StorageProxy.prototype.removeFromCollection = function(key, value, item) {
     return removeFromCollection(key, value, item);
 };
 
+StorageProxy.prototype.addToParent = function(linked, uri, resource) {
+    return addToParent.call(this, linked, uri, resource);
+};
+
+StorageProxy.prototype.removeFromParent = function(linked, resource) {
+    return removeFromParent.call(this, linked, resource);
+};
+
+StorageProxy.prototype.embedCollection = function(resource, collection) {
+    return embedCollection.call(this, resource, collection);
+};
+ 
 StorageProxy.prototype.firstAvailableKey = function(resource) {
     var i = 1;
     while (this.hasItem(resource + '/' + i))
@@ -505,9 +531,7 @@ Api.prototype.batchRun = function(batch, onComplete, onProgress) {
             response = this._route(req, memstore ? memstore : this._storage);
         if (true == this._debugMode)
             console.log(response);
-        if (response.status === ApiResponse.TYPE_ERROR) {
-            messages.push(response);
-        }
+        messages.push(response);
         batch = batch.slice(1);
         setTimeout(processOne, this._interval);
     }.bind(this);
@@ -736,6 +760,18 @@ BrowserStorage.prototype.removeFromCollection = function(key, value, item) {
     });
 };
 
+BrowserStorage.prototype.addToParent = function(linked, uri, resource) {
+    return addToParent.call(this, linked, uri, resource);
+};
+
+BrowserStorage.prototype.removeFromParent = function(linked, resource) {
+    return removeFromParent.call(this, linked, resource);
+};
+
+BrowserStorage.prototype.embedCollection = function(resource, collection) {
+    return embedCollection.call(this, resource, collection);
+};
+ 
 BrowserStorage.prototype.firstAvailableKey = function(resource) {
     var i = 1;
     while (this.hasItem(resource + '/' + i))
@@ -856,6 +892,9 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
     if (this._onRequestStart) {
         this._onRequestStart(); 
     }
+    if (this._device._onSyncStart) {
+        this._device._onSyncStart(); 
+    }
     var requestHandler = this._requestHandler.bind(this);
     var _request = {
         url     : this._url + '/' + this._syncSuffix,
@@ -881,7 +920,10 @@ BasicHttpEndpoint.prototype.sync = function(targets, onSuccess, onError, onProgr
                 if ('function' === typeof onSuccess) {
                     onSuccess(messages, resp);
                 }
-            }, onProgress);
+                if (this._device._onSyncComplete) {
+                    this._device._onSyncComplete(messages); 
+                }
+            }.bind(this), onProgress);
             this._device.setSyncPoint(resp.syncPoint);
         }.bind(this), 
         function(e) {

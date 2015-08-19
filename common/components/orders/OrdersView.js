@@ -4,9 +4,12 @@ import React                            from 'react'
 import TimeAgo                          from 'react-timeago'
 import DataStore                        from '../../store/DataStore'
 
-import {Modal, Panel, TabPane, TabbedArea, Table} from 'react-bootstrap'
+import {Button, Glyphicon, Modal, Panel, TabPane, TabbedArea, Table} from 'react-bootstrap'
 
 const OrdersView = React.createClass({
+    editOrder: function() {
+        location.hash = this.props.order.id + '/edit'
+    },
     render: function() {
         let order = this.props.order
         if (!order || !order.items) {
@@ -66,6 +69,13 @@ const OrdersView = React.createClass({
                         </tr>
                     </tfoot>
                 </Table>
+                <Button
+                  block
+                  onClick={this.editOrder}>
+                    <Glyphicon
+                      glyph='pencil' />
+                    Edit order
+                </Button>
             </div>
         )
     }

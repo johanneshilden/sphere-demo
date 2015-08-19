@@ -34,81 +34,465 @@ import {Route, RouteHandler} from 'react-router'
 import {Badge, Glyphicon, Navbar, Nav, NavItem, CollapsibleNav, MenuItem, DropdownButton} from 'react-bootstrap'
 
 const store = new GroundFork.BrowserStorage({
-    namespace : 'sphere.callcenter'
+    useCompression : false,
+    namespace      : 'sphere.callcenter'
 })
+
+function getLink(obj, resource) {
+    if (!obj || !obj.hasOwnProperty('_links') || !obj['_links'].hasOwnProperty(resource))
+        return null;
+    return obj['_links'][resource].href;
+}
 
 const api = new GroundFork.Api({
     storage            : store,
     debugMode          : true,
     interval           : 5,
+    onSyncComplete     : function(log) {
+        log.forEach(item => {
+            //if ('POST' === item.command.up.method && 'stock-movements' === item.command.up.resource) {
+            //    let move  = item.command.up.payload,
+            //        stock = DataStore.getItem(move['_links']['stock'].href)
+            //    if (stock && stock.available < 0) {
+            //        let order = DataStore.getItem(move['_links']['order'].href)
+            //        AppDispatcher.dispatch({
+            //            actionType : 'command-invoke',
+            //            command    : {
+            //                method   : 'DELETE',
+            //                resource : order.id
+            //            }
+            //        })
+            //        AppDispatcher.dispatch({
+            //            actionType : 'command-invoke',
+            //            command    : {
+            //                method   : 'POST',
+            //                resource : 'orders-rejected',
+            //                payload  : order
+            //            },
+            //            notification: {
+            //                message : 'An order was temporarily rejected due to insufficient stock of one or more products.',
+            //                level   : 'warning'
+            //            }
+            //        })
+            //        order.items.forEach(item => {
+            //            let productId = item['_links']['product'].href,
+            //                product = DataStore.getItem(productId)
+            //            if (product && (stock = product.getLink('stock'))) {
+            //                AppDispatcher.dispatch({
+            //                    actionType : 'command-invoke',
+            //                    command    : {
+            //                        method   : 'POST',
+            //                        resource : 'stock-movements',
+            //                        payload  : {
+            //                            'action'   : 'Order blocked due to insufficient stock.',
+            //                            'type'     : 'available',
+            //                            'created'  : Date.now(),
+            //                            'quantity' : Number(item.quantity),
+            //                            '_links'   : {
+            //                                'order'   : { 'href' : order.id },
+            //                                'stock'   : { 'href' : stock },
+            //                                'product' : { 'href' : productId }
+            //                            }
+            //                        }
+            //                    }
+            //                })
+            //            }
+            //        })
+            //    }
+            //}
+        })
+    },
     patterns           : {
-        'PATCH/stock/:id': function(context, request) {
-            var key = 'stock/' + context.id,
-                item = store.getItem(key),
-                reverse = {}
-            if (item) {
-                var adjustAvailable = Number(request.payload.adjustAvailable),
-                    adjustActual    = Number(request.payload.adjustActual)
-                if (adjustAvailable) {
-                    item.available += adjustAvailable
-                    reverse.adjustAvailable = -adjustAvailable
+        'POST/stock-movements': function(context, request) {
+            let payload   = request.payload,
+                uri       = getLink(payload, 'self'),
+                stock     = getLink(payload, 'stock'),
+                stockItem = this.getItem(stock)
+            api._route({
+                method   : 'PATCH',
+                resource : stock,
+                payload  : {
+                    available : stockItem.available + payload.quantity
                 }
-                if (adjustActual) {
-                    item.actual += adjustActual
-                    reverse.adjustActual = -adjustActual
-                }
-                store.insertItem(key, item)
-                if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('_parent')) {
-                    var product = item['_links']['_parent'].href
-                    store.updateCollectionWith(product, function(collection) {
-                        if (!collection.hasOwnProperty('_links')) 
-                            collection['_links'] = {}
-                        collection['_links']['stock'] = {
-                            'href': key
-                        }
-                        if (!collection.hasOwnProperty('_embedded')) 
-                            collection['_embedded'] = {}
-                        var _item = {}
-                        for (var key in item) {
-                            if ('_embedded' !== key) 
-                                _item[key] = item[key]
-                        }
-                        collection['_embedded']['stock'] = _item
-                    })
-                }
-            }
-            return {
-                "status" : 'success',
-                "data"   : reverse
-            }
+            }, this)
         },
-        'POST/orders': function(context, request) {
-            let orderItems = request.payload.items
-            if (!orderItems || !orderItems.length)
-                return
-            var stock, product
-            orderItems.forEach(item => {
-                product = DataStore.getItem(item['_links']['product'].href)
-                if (product && (stock = product.getLink('stock'))) {
-                    api.patch(stock, { 
-                        adjustAvailable: -Number(item.quantity)
-                    })
-                    api.post('stock-movements', {
-                        'action'   : 'Order created.',
-                        'type'     : 'available',
-                        'created'  : Date.now(),
-                        'quantity' : -Number(item.quantity),
-                        '_links'   : {
-                            'order'   : request.payload['_links']['self'],
-                            'stock'   : { 'href' : stock },
-                            'product' : { 'href' : product.id }
-                        }
-                    })
+        'DELETE/stock-movements/:id': function(context, request) {
+            let key       = 'stock-movements/' + context.id,
+                move      = this.getItem(key),
+                stock     = getLink(move, 'stock'),
+                stockItem = this.getItem(stock)
+            api._route({
+                method   : 'PATCH',
+                resource : stock,
+                payload  : {
+                    available : stockItem.available - move.quantity
                 }
-            })
+            }, this)
         }
     }
+//        'PATCH/stock/:id': function(context, request) {
+//            var key = 'stock/' + context.id,
+//                item = this.getItem(key),
+//                reverse = {}
+//            if (item) {
+//                var adjustAvailable = Number(request.payload.adjustAvailable),
+//                    adjustActual    = Number(request.payload.adjustActual)
+//                if (adjustAvailable) {
+//                    if (item.available + adjustAvailable < 0) {
+//                        return {
+//                            "status"   : 'error',
+//                            "resource" : 'stock',
+//                            "_error"   : 'INSUFFICIENT_STOCK'
+//                        }
+//                    }
+//                    item.available += adjustAvailable
+//                    reverse.adjustAvailable = -adjustAvailable
+//                }
+//                if (adjustActual) {
+//                    item.actual += adjustActual
+//                    reverse.adjustActual = -adjustActual
+//                }
+//                this.insertItem(key, item)
+//                //if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('_parent')) {
+//                //    var product = item['_links']['_parent'].href
+//                //    this.updateCollectionWith(product, function(collection) {
+//                //        if (!collection.hasOwnProperty('_links')) 
+//                //            collection['_links'] = {}
+//                //        collection['_links']['stock'] = {
+//                //            'href': key
+//                //        }
+//                //        if (!collection.hasOwnProperty('_embedded')) 
+//                //            collection['_embedded'] = {}
+//                //        var _item = {}
+//                //        for (var _key in item) {
+//                //            if ('_embedded' !== _key) 
+//                //                _item[_key] = item[_key]
+//                //        }
+//                //        collection['_embedded']['stock'] = _item
+//                //    })
+//                //}
+//            }
+//            request.payload = {}
+//            //return {
+//            //    "status" : 'success',
+//            //    "data"   : reverse
+//            //}
+//        },
+//        'POST/orders': function(context, request) {
+//            let orderItems = request.payload.items,
+//                commands   = []
+//            var stock
+//            orderItems.forEach(item => {
+//                let product = this.getItem(getLink(item, 'product')) 
+//                if (product && (stock = getLink(product, 'stock'))) {
+//                    commands.push({
+//                        method   : 'PATCH',
+//                        resource : stock,
+//                        payload  : {
+//                            adjustAvailable: -Number(item.quantity)
+//                        }
+//                    })
+//                    commands.push({
+//                        method   : 'POST',
+//                        resource : 'stock-movements',
+//                        payload  : {
+//                            'action'   : 'Order created.',
+//                            'type'     : 'available',
+//                            'created'  : Date.now(),
+//                            'quantity' : -Number(item.quantity),
+//                            '_links'   : {
+//                                'order'   : getLink(request.payload, 'self'),
+//                                'stock'   : { 'href' : stock },
+//                                'product' : { 'href' : product.id }
+//                            }
+//                        }
+//                    })
+//                }
+//            })
+//            let result = api.run(commands, true, this)
+//            if ('error' === result.status) {
+//                api.post('orders-rejected', request.payload)
+//                return result
+//            } else {
+//                let movements = []
+//                result.log.forEach(item => {
+//                    if ('stock-movements' === item.command.up.resource) {
+//                        movements.push(getLink(item.data, 'self'))
+//                    }
+//                })
+//                if (!request.payload.hasOwnProperty('_links')) 
+//                    request.payload['_links'] = {}
+//                request.payload['_links']['stock-movements'] = movements
+//            }
+//        },
+//        'DELETE/orders/:id': function(context, request) {
+//            let resource = context.resource,
+//                key      = 'orders/' + context.id,
+//                order    = this.getItem(key)
+//            if (!order) {
+//                return { 
+//                    "status"   : GroundFork.ApiResponse.TYPE_ERROR,
+//                    "_error"   : "MISSING_KEY", 
+//                    "resource" : key 
+//                }
+//            }
+//            let orderItems = order.items,
+//                stockMovements = getLink(order, 'stock-movements'),
+//                commands = []
+//            if (stockMovements) {
+//                stockMovements.forEach(item => {
+//                    api._route({
+//                        method   : 'DELETE',
+//                        resource : item.href 
+//                    }, this)
+//                })
+//            }
+//            var stock
+//            orderItems.forEach(item => {
+//                let product = this.getItem(getLink(item, 'product')) 
+//                if (product && (stock = getLink(product, 'stock'))) {
+//                    api._route({
+//                        method   : 'PATCH',
+//                        resource : stock,
+//                        payload  : {
+//                            adjustAvailable: Number(item.quantity)
+//                        }
+//                    }, this)
+//                }
+//            })
+//        }
+//    }
 })
+
+//const api = new GroundFork.Api({
+//    storage            : store,
+//    debugMode          : true,
+//    interval           : 5,
+//    patterns           : {
+//        'PATCH/stock/:id': function(context, request) {
+//            var key = 'stock/' + context.id,
+//                item = this.getItem(key),
+//                reverse = {}
+//            if (item) {
+//                var adjustAvailable = Number(request.payload.adjustAvailable),
+//                    adjustActual    = Number(request.payload.adjustActual)
+//                if (adjustAvailable) {
+//
+//                    console.log('item.available : ' + item.available)
+//                    console.log('adjustAvailable : ' + adjustAvailable)
+//                    console.log('+ : ' + (item.available + adjustAvailable))
+//
+//                    if (item.available + adjustAvailable < 0) {
+//                        return {
+//                            "status"   : 'error',
+//                            "resource" : 'stock',
+//                            "_error"   : 'INSUFFICIENT_STOCK'
+//                        }
+//                    }
+//                    item.available += adjustAvailable
+//                    reverse.adjustAvailable = -adjustAvailable
+//                }
+//                if (adjustActual) {
+//                    item.actual += adjustActual
+//                    reverse.adjustActual = -adjustActual
+//                }
+//                this.insertItem(key, item)
+//                if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('_parent')) {
+//                    var product = item['_links']['_parent'].href
+//                    this.updateCollectionWith(product, function(collection) {
+//                        if (!collection.hasOwnProperty('_links')) 
+//                            collection['_links'] = {}
+//                        collection['_links']['stock'] = {
+//                            'href': key
+//                        }
+//                        if (!collection.hasOwnProperty('_embedded')) 
+//                            collection['_embedded'] = {}
+//                        var _item = {}
+//                        for (var _key in item) {
+//                            if ('_embedded' !== _key) 
+//                                _item[_key] = item[_key]
+//                        }
+//                        collection['_embedded']['stock'] = _item
+//                    })
+//                }
+//            }
+//            return {
+//                "status" : 'success',
+//                "data"   : reverse
+//            }
+//        }
+//    }
+//})
+//
+//const api = new GroundFork.Api({
+//    storage            : store,
+//    debugMode          : true,
+//    interval           : 5,
+//    patterns           : {
+//        'PATCH/stock/:id': function(context, request) {
+//            var key = 'stock/' + context.id,
+//                item = this.getItem(key),
+//                reverse = {}
+//            if (item) {
+//                var adjustAvailable = Number(request.payload.adjustAvailable),
+//                    adjustActual    = Number(request.payload.adjustActual)
+//                if (adjustAvailable) {
+//                    if (item.available + adjustAvailable < 0) {
+//                        return {
+//                            "status"   : 'error',
+//                            "resource" : 'stock',
+//                            "_error"   : 'INSUFFICIENT_STOCK'
+//                        }
+//                    }
+//                    item.available += adjustAvailable
+//                    reverse.adjustAvailable = -adjustAvailable
+//                }
+//                if (adjustActual) {
+//                    item.actual += adjustActual
+//                    reverse.adjustActual = -adjustActual
+//                }
+//                this.insertItem(key, item)
+//                if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('_parent')) {
+//                    var product = item['_links']['_parent'].href
+//                    this.updateCollectionWith(product, function(collection) {
+//                        if (!collection.hasOwnProperty('_links')) 
+//                            collection['_links'] = {}
+//                        collection['_links']['stock'] = {
+//                            'href': key
+//                        }
+//                        if (!collection.hasOwnProperty('_embedded')) 
+//                            collection['_embedded'] = {}
+//                        var _item = {}
+//                        for (var _key in item) {
+//                            if ('_embedded' !== _key) 
+//                                _item[_key] = item[_key]
+//                        }
+//                        collection['_embedded']['stock'] = _item
+//                    })
+//                }
+//            }
+//            return {
+//                "status" : 'success',
+//                "data"   : reverse
+//            }
+//        },
+//        'POST/orders': function(context, request) {
+//            let orderItems = request.payload.items
+//            if (!orderItems || !orderItems.length)
+//                return
+//            var stock, product
+//            var commands = []
+//            orderItems.forEach(item => {
+//                product = DataStore.getItem(item['_links']['product'].href)
+//                if (product && (stock = product.getLink('stock'))) {
+//                    commands.push({
+//                        method   : 'PATCH',
+//                        resource : 'stock',
+//                        payload  : {
+//                            adjustAvailable: -Number(item.quantity)
+//                        }
+//                    })
+//                    commands.push({
+//                        method   : 'POST',
+//                        resource : 'stock-movements',
+//                        payload  : {
+//                            'action'   : 'Order created.',
+//                            'type'     : 'available',
+//                            'created'  : Date.now(),
+//                            'quantity' : -Number(item.quantity),
+//                            '_links'   : {
+//                                'order'   : request.payload['_links']['self'],
+//                                'stock'   : { 'href' : stock },
+//                                'product' : { 'href' : product.id }
+//                            }
+//                        }
+//                    })
+//                }
+//            })
+//            if (!api.run(commands, true)) {
+//                api.post('orders-rejected', request.payload)
+//                return { 
+//                    "status"   : GroundFork.ApiResponse.TYPE_ERROR,
+//                    "_error"   : "INSUFFICIENT_STOCK", 
+//                    "resource" : request.payload['_links'].self.href
+//                }
+//            } 
+//        }
+//    }
+//})
+
+//const api = new GroundFork.Api({
+//    storage            : store,
+//    debugMode          : true,
+//    interval           : 5,
+//    patterns           : {
+//        'PATCH/stock/:id': function(context, request) {
+//            var key = 'stock/' + context.id,
+//                item = this.getItem(key),
+//                reverse = {}
+//            if (item) {
+//                var adjustAvailable = Number(request.payload.adjustAvailable),
+//                    adjustActual    = Number(request.payload.adjustActual)
+//                if (adjustAvailable) {
+//                    item.available += adjustAvailable
+//                    reverse.adjustAvailable = -adjustAvailable
+//                }
+//                if (adjustActual) {
+//                    item.actual += adjustActual
+//                    reverse.adjustActual = -adjustActual
+//                }
+//                this.insertItem(key, item)
+//                if (item.hasOwnProperty('_links') && item['_links'].hasOwnProperty('_parent')) {
+//                    var product = item['_links']['_parent'].href
+//                    this.updateCollectionWith(product, function(collection) {
+//                        if (!collection.hasOwnProperty('_links')) 
+//                            collection['_links'] = {}
+//                        collection['_links']['stock'] = {
+//                            'href': key
+//                        }
+//                        if (!collection.hasOwnProperty('_embedded')) 
+//                            collection['_embedded'] = {}
+//                        var _item = {}
+//                        for (var key in item) {
+//                            if ('_embedded' !== key) 
+//                                _item[key] = item[key]
+//                        }
+//                        collection['_embedded']['stock'] = _item
+//                    })
+//                }
+//            }
+//            return {
+//                "status" : 'success',
+//                "data"   : reverse
+//            }
+//        },
+//        'POST/orders': function(context, request) {
+//            let orderItems = request.payload.items
+//            if (!orderItems || !orderItems.length)
+//                return
+//            var stock, product
+//            orderItems.forEach(item => {
+//                product = DataStore.getItem(item['_links']['product'].href)
+//                if (product && (stock = product.getLink('stock'))) {
+//                    api.patch(stock, { 
+//                        adjustAvailable: -Number(item.quantity)
+//                    })
+//                    api.post('stock-movements', {
+//                        'action'   : 'Order created.',
+//                        'type'     : 'available',
+//                        'created'  : Date.now(),
+//                        'quantity' : -Number(item.quantity),
+//                        '_links'   : {
+//                            'order'   : request.payload['_links']['self'],
+//                            'stock'   : { 'href' : stock },
+//                            'product' : { 'href' : product.id }
+//                        }
+//                    })
+//                }
+//            })
+//        }
+//    }
+//})
 
 const endpoint = new GroundFork.BasicHttpEndpoint({
     api               : api,

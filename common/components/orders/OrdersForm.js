@@ -123,6 +123,70 @@ const MyForm = React.createClass({
     }
 })
 
+const EditForm = React.createClass({
+    reset: function() {
+        this._update(false)
+    },
+    _update: function(value) {
+         AppDispatcher.dispatch({
+             actionType : 'order-form-proactive-assign',
+             proactive  : value
+         })
+    },
+    render: function() {
+        return (
+            <div>
+                {this.props.filterComponent}
+                {this.props.hasValidItem ? (
+                    <div 
+                      style     = {{marginTop: '1em'}}
+                      className = {'form-group has-feedback' + this.props.validState ? ' has-' + this.props.validState : ''}>
+                        <div className='row'>
+                            <div className='col-xs-4'>
+                                <input 
+                                  className    = 'form-control'
+                                  placeholder  = 'Quantity'
+                                  value        = {this.props.value}
+                                  defaultValue = {1}
+                                  onChange     = {this.props.onChange}
+                                  type         = 'text' />
+                                {this.props.hint ? (
+                                    <p className='help-block'>
+                                        {this.props.hint}
+                                    </p>
+                                ) : <span />}
+                            </div>
+                            <div className='col-xs-8'>
+                                <button 
+                                  className = 'btn btn-primary btn-block'
+                                  onClick   = {this.props.onItemSelected}>
+                                    <span 
+                                      className  = 'glyphicon glyphicon-plus-sign'
+                                      ariaHidden = 'true' />
+                                    Add item
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ) : <span />}
+                {!this.props.selectionIsEmpty ? (
+                    <div className='form-group'>
+                        <hr />
+                        <button 
+                          className = 'btn btn-default btn-block'
+                          onClick   = {this.props.onSubmit}>
+                            <span 
+                              className  = 'glyphicon glyphicon-ok'
+                              ariaHidden = 'true' />
+                            Submit
+                        </button>
+                    </div>
+                ) : <span />}
+            </div>
+        )
+    }
+})
+
 const MyFilterComponent = React.createClass({
     render: function() {
         let feedback = ''
@@ -363,7 +427,6 @@ function validateQty(item, newQty, initialQty) {
     }
 }
 
-
 const OrdersRegistrationForm = React.createClass({
     getInitialState: function() {
         let collection    = DataStore.fetchCollection('products'),
@@ -382,8 +445,8 @@ const OrdersRegistrationForm = React.createClass({
     },
     handleSubmit: function(selection) {
         let itemCount = 0, 
-            tot = 0,
-            items = selection.map(item => {
+            tot = 0
+        let items = selection.map(item => {
             let qty = Number(item.qty),
                 _item = this.state.items[item.id],
                 price = isNaN(_item.itemPrice) ? 'N/a' : (_item.itemPrice * qty)
@@ -395,7 +458,11 @@ const OrdersRegistrationForm = React.createClass({
                 'quantity'    : qty,
                 'itemPrice'   : _item.itemPrice,
                 'price'       : price,
-                '_links'      : { 'product' : {'href': item.id} }
+                '_links'      : { 
+                    'product' : {
+                        'href': item.id
+                    } 
+                }
             }
             DataStore.store.embed(orderItem, 'product')
             return orderItem
@@ -427,11 +494,36 @@ const OrdersRegistrationForm = React.createClass({
         AppDispatcher.dispatch({
             actionType : 'customer-activity',
             command    : {
-                method     : 'POST',
-                resource   : 'orders', 
-                payload    : order 
+                method   : 'POST',
+                resource : 'orders',
+                payload  : order
             },
             activity   : activity
+        })
+        var stock
+        items.forEach(item => {
+            let productId = item['_links']['product'].href,
+                product = DataStore.getItem(productId)
+            if (product && (stock = product.getLink('stock'))) {
+                AppDispatcher.dispatch({
+                    actionType : 'command-invoke',
+                    command    : {
+                        method   : 'POST',
+                        resource : 'stock-movements',
+                        payload  : {
+                            'action'   : 'Order created.',
+                            'type'     : 'available',
+                            'created'  : Date.now(),
+                            'quantity' : -Number(item.quantity),
+                            '_links'   : {
+                                'order'   : order['_links']['self'],
+                                'stock'   : { 'href' : stock },
+                                'product' : { 'href' : productId }
+                            }
+                        }
+                    }
+                })
+            }
         })
         this.props.close()
     },
@@ -458,25 +550,115 @@ const OrdersRegistrationForm = React.createClass({
 
 const OrdersEditForm = React.createClass({
     getInitialState: function() {
-//        let collection    = DataStore.fetchCollection('products'),
-//            items         = {},
-//            priceCategory = this.props.customer.priceCategory
-//        collection.forEach(item => { 
-//            console.log(item.getEmbedded('prices'))
-//            item.itemPrice = 0
-//            items[item.id] = item 
-//        })
-//        return {
-//            items : items
-//        }
+        let collection    = DataStore.fetchCollection('products'),
+            items         = {},
+            priceCategory = this.props.customer.priceCategory
+        collection.forEach(item => { 
+            let prices = item.getEmbedded('prices')
+            item.itemPrice = 0
+            if (prices) 
+                item.itemPrice = prices[priceCategory] || 'Not available'
+            items[item.id] = item 
+        })
+        return {
+            items : items
+        }
     },
     handleSubmit: function(selection) {
+        var stock, diffMap = {}
+        if (this.props.order.items) {
+            this.props.order.items.forEach(item => {
+                let product = DataStore.getItem(item['_links']['product'].href)
+                if (product && (stock = product.getLink('stock'))) {
+                    diffMap[stock] = {
+                        diff    : item.quantity,
+                        product : product.id
+                    }
+                }
+            })
+        }
+        let itemCount = 0, 
+            tot = 0
+        let items = selection.map(item => {
+            let qty = Number(item.qty),
+                _item = this.state.items[item.id],
+                stock = _item['_links']['stock'].href,
+                price = isNaN(_item.itemPrice) ? 'N/a' : (_item.itemPrice * qty)
+            itemCount += qty
+            if (!isNaN(price)) {
+                tot += price
+            }
+            if (diffMap.hasOwnProperty(stock)) {
+                diffMap[stock].diff -= qty
+            } else {
+                diffMap[stock] = {
+                    diff    : -qty,
+                    product : item.id
+                }
+            }
+            let orderItem = {
+                'quantity'    : qty,
+                'itemPrice'   : _item.itemPrice,
+                'price'       : price,
+                '_links'      : { 
+                    'product' : {
+                        'href': item.id
+                    } 
+                }
+            }
+            DataStore.store.embed(orderItem, 'product')
+            return orderItem
+        })
+        let order   = this.props.order,
+            orderId = order.getLink('self')
+        order.items     = items
+        order.itemCount = itemCount
+        order.changed   = Date.now()
+        order.total     = tot
+        AppDispatcher.dispatch({
+            actionType : 'command-invoke',
+            command    : {
+                method   : 'PUT',
+                resource : orderId,
+                payload  : order
+            },
+            notification : {
+                message : 'The order details were successfully updated.',
+                level   : 'success'
+
+            }
+        })
+        for (var key in diffMap) {
+            let diffItem = diffMap[key],
+                product  = DataStore.getItem(diffItem.product)
+            if (diffItem.diff && product && (stock = product.getLink('stock'))) {
+                AppDispatcher.dispatch({
+                    actionType : 'command-invoke',
+                    command    : {
+                        method   : 'POST',
+                        resource : 'stock-movements',
+                        payload  : {
+                            'action'   : 'Order edited.',
+                            'type'     : 'available',
+                            'created'  : Date.now(),
+                            'quantity' : diffItem.diff,
+                            '_links'   : {
+                                'order'   : { 'href' : orderId },
+                                'stock'   : { 'href' : stock },
+                                'product' : { 'href' : product.id }
+                            }
+                        }
+                    }
+                })
+            }
+        }
+        location.hash = orderId
     },
     render: function() {
         return (
             <BasketComponent
               ref                = 'basket'
-              formComponent      = {MyForm}
+              formComponent      = {EditForm}
               filterComponent    = {MyFilterComponent}
               editorComponent    = {MyEditor}
               containerComponent = {MyContainer}
@@ -488,16 +670,7 @@ const OrdersEditForm = React.createClass({
               filterKeys         = {['name', 'sku']}
               filterMaxResults   = {10}
               filterMinStrLength = {2}
-              selection          = {[
-                  {
-                      id  : 'products/_VVTm',
-                      qty : 1
-                  },
-                  {
-                      id  : 'products/_14Ty',
-                      qty : 1
-                  }
-              ]} />
+              selection          = {this.props.initialSelection} />
         )
     }
 })

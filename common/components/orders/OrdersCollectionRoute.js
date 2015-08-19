@@ -7,12 +7,17 @@ import {Panel} from 'react-bootstrap'
 
 const OrdersCollectionRoute = React.createClass({
     fetchOrders: function() {
-        var orders = DataStore.fetchCollection('orders')
-        this.setState({orders: orders})
+        let orders   = DataStore.fetchCollection('orders'),
+            rejected = DataStore.fetchCollection('orders-rejected')
+        this.setState({
+            orders   : orders,
+            rejected : rejected
+        })
     },
     getInitialState: function() {
         return {
-            orders : []
+            orders   : [],
+            rejected : []
         }
     },
     componentDidMount: function() {
@@ -24,12 +29,9 @@ const OrdersCollectionRoute = React.createClass({
     },
     render: function() {
         return (
-            <Panel 
-              className = 'panel-fill'
-              bsStyle   = 'primary'
-              header    = 'Orders'>
-                <OrdersCollection orders={this.state.orders} />
-            </Panel>
+            <OrdersCollection 
+              orders   = {this.state.orders} 
+              rejected = {this.state.rejected} />
         )
     }
 })

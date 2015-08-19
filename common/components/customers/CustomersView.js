@@ -9,7 +9,7 @@ import CallbackRegistrationForm         from '../customers/CallbackRegistrationF
 import ComplaintsCollection             from '../complaints/ComplaintsCollection'
 import CustomerVisitRegistrationForm    from '../customers/CustomerVisitRegistrationForm'
 import DataStore                        from '../../store/DataStore'
-import OrderRegistrationModal           from '../orders/OrderRegistrationModal'
+import OrdersRegistrationModal          from '../orders/OrdersRegistrationModal'
 import OrdersCollection                 from '../orders/OrdersCollection'
 import QualityComplaintModal            from '../complaints/QualityComplaintModal'
 import ServiceComplaintRegistrationForm from '../complaints/ServiceComplaintRegistrationForm'
@@ -234,7 +234,7 @@ const CustomersView = React.createClass({
             case 'call-activity-place-order':
             case 'customer-visit-place-order':
                 return (
-                    <OrderRegistrationModal 
+                    <OrdersRegistrationModal 
                       visible      = {this.state.modalVisible}
                       close        = {this.closeModal}
                       customer     = {this.props.customer}
@@ -480,8 +480,8 @@ const CustomersView = React.createClass({
                             <Panel 
                               className='panel-tab-pane'>
                                 <OrdersCollection
-                                  showCustomer = {false}
-                                  orders       = {this.props.orders} />
+                                  tabbedMode = {false}
+                                  orders     = {this.props.orders} />
                             </Panel>
                         </TabPane>
                         <TabPane 
